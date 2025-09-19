@@ -1,0 +1,69 @@
+<!-- ormd:0.1 -->
+---
+title: "Progress Update: Parser and Validator Support for Context Block"
+authors: ["Jules"]
+dates:
+  created: '2025-09-18T20:54:00Z'
+context:
+  lineage:
+    source: "jules-documentation-session-2025-09-18"
+    parent_docs: ["../docs/planning/next-tasks.ormd"]
+  resolution:
+    confidence: "validated"
+links:
+  - id: task-definition
+    rel: implements
+    to: "../docs/planning/next-tasks.ormd"
+  - id: schema-changes
+    rel: modifies
+    to: "../ormd_cli/src/ormd_cli/schema.py"
+  - id: validator-changes
+    rel: modifies
+    to: "../ormd_cli/src/ormd_cli/validator.py"
+  - id: parser-changes
+    rel: modifies
+    to: "../ormd_cli/src/ormd_cli/parser.py"
+  - id: new-tests
+    rel: adds
+    to: "../ormd_cli/tests/test_context.py"
+  - id: new-documentation
+    rel: explains
+    to: "../docs/parser-and-validator-logic.ormd"
+status: "completed"
+description: "Documents the completion of Task 1 from the Context Layer MVP plan: adding parser and validator support for the context block."
+---
+
+# Progress Update: Context Block Implementation
+
+This document confirms the completion of the [[task-definition]] first task for the Context Layer MVP: adding full support for the `context` block to the ORMD parser and validator.
+
+## Summary of Changes
+
+The core logic of the `ormd-cli` has been updated to recognize, validate, and serialize the new `context` block in a backward-compatible manner.
+
+### 1. Schema Enhancement ([[schema-changes]])
+
+-   The official front-matter schema (`schema.py`) was updated with new dataclasses (`Context`, `Lineage`, `Resolution`) to define the structure of the `context` block.
+-   Detailed validation logic was added to `FrontMatterValidator` to enforce the rules for the new fields (e.g., correct types, valid confidence levels).
+
+### 2. Validator Update ([[validator-changes]])
+
+-   The main `ORMDValidator` was updated to recognize `context` as a valid top-level key in the front-matter, preventing it from being flagged as an "unknown field."
+
+### 3. Parser Update ([[parser-changes]])
+
+-   The `serialize_front_matter` function was updated to ensure the `context` block is written in a consistent, logical order when ORMD files are saved.
+
+### 4. New Tests ([[new-tests]])
+
+-   A dedicated test file, `test_context.py`, was created to isolate and verify the new functionality.
+-   The tests cover valid cases, invalid cases (e.g., bad confidence values, incorrect structure), and backward compatibility, ensuring that documents without a `context` block remain valid.
+-   All new tests are passing.
+
+### 5. New Documentation ([[new-documentation]])
+
+-   A new documentation file has been created to explain the internal logic of the parser and validator, including how they now handle the `context` block.
+
+## Conclusion
+
+The foundational work for the Context Layer MVP is complete. The CLI can now correctly parse and validate documents that use the experimental `context` block. This paves the way for implementing the user-facing CLI commands (`ormd create --from-conversation`, etc.) that will leverage this new metadata.

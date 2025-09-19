@@ -67,6 +67,26 @@ class Metrics:
 
 
 @dataclass
+class Lineage:
+    """Context lineage information"""
+    source: Optional[str] = None
+    parent_docs: Optional[List[str]] = field(default_factory=list)
+
+
+@dataclass
+class Resolution:
+    """Context resolution information"""
+    confidence: Optional[str] = None
+
+
+@dataclass
+class Context:
+    """Context block for conversation lineage and uncertainty"""
+    lineage: Optional[Lineage] = None
+    resolution: Optional[Resolution] = None
+
+
+@dataclass
 class ORMDFrontMatter:
     """Complete ORMD front-matter schema for Phase 1"""
     # Required fields
@@ -78,6 +98,7 @@ class ORMDFrontMatter:
     dates: Optional[Dates] = None
     metrics: Optional[Metrics] = None
     permissions: Optional[Permissions] = None
+    context: Optional[Context] = None
     
     # Optional simple fields
     version: Optional[str] = None
@@ -215,6 +236,10 @@ class FrontMatterValidator:
         if 'permissions' in front_matter:
             self._validate_permissions(front_matter['permissions'])
         
+        # Validate context structure
+        if 'context' in front_matter:
+            self._validate_context(front_matter['context'])
+
         # Validate simple optional fields
         self._validate_simple_optional_fields(front_matter)
     
@@ -266,6 +291,49 @@ class FrontMatterValidator:
                 value = permissions[bool_field]
                 if not isinstance(value, bool):
                     self.errors.append(f"Field 'permissions.{bool_field}' must be a boolean")
+
+    def _validate_context(self, context: Any) -> None:
+        """Validate context object"""
+        if not isinstance(context, dict):
+            self.errors.append("Field 'context' must be an object")
+            return
+
+        if 'lineage' in context:
+            self._validate_lineage(context['lineage'])
+
+        if 'resolution' in context:
+            self._validate_resolution(context['resolution'])
+
+    def _validate_lineage(self, lineage: Any) -> None:
+        """Validate lineage object"""
+        if not isinstance(lineage, dict):
+            self.errors.append("Field 'context.lineage' must be an object")
+            return
+
+        if 'source' in lineage and not isinstance(lineage['source'], str):
+            self.errors.append("Field 'context.lineage.source' must be a string")
+
+        if 'parent_docs' in lineage:
+            parent_docs = lineage['parent_docs']
+            if not isinstance(parent_docs, list):
+                self.errors.append("Field 'context.lineage.parent_docs' must be a list")
+            else:
+                for i, doc in enumerate(parent_docs):
+                    if not isinstance(doc, str):
+                        self.errors.append(f"Item {i} in 'context.lineage.parent_docs' must be a string")
+
+    def _validate_resolution(self, resolution: Any) -> None:
+        """Validate resolution object"""
+        if not isinstance(resolution, dict):
+            self.errors.append("Field 'context.resolution' must be an object")
+            return
+
+        if 'confidence' in resolution:
+            confidence = resolution['confidence']
+            if not isinstance(confidence, str):
+                self.errors.append("Field 'context.resolution.confidence' must be a string")
+            elif confidence not in ['exploratory', 'working', 'validated']:
+                self.errors.append("Field 'context.resolution.confidence' must be one of: exploratory, working, validated")
     
     def _validate_simple_optional_fields(self, front_matter: Dict[str, Any]) -> None:
         """Validate simple optional fields"""
