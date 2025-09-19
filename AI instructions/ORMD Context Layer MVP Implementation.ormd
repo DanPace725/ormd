@@ -1,0 +1,104 @@
+# AI Coding Agent Instructions: ORMD Context Layer MVP Implementation
+
+## Overview
+You are implementing a minimal viable context layer for ORMD that adds conversation lineage tracking and explicit uncertainty levels. This is exploratory work to validate the concept before full CLP integration.
+
+## Pre-work Setup
+1. **Create new branch**: `context-layer-mvp` from current main branch
+2. **Ensure you're working in the ORMD repository** (should contain `ormd_cli/`, `examples/`, `docs/`, etc.)
+
+## Task List
+
+### 1. Update README.md
+**File**: `README.md` (root level)
+
+**Changes needed**:
+- Add new section after existing CLI commands: "## Context Layer Features (Experimental)"
+- Document the new YAML fields: `context.lineage` and `context.resolution`
+- Add example showing minimal viable context format
+- Note this is experimental/MVP functionality
+
+**Keep existing**: All current installation, usage, and CLI documentation
+
+### 2. Update Specification Document
+**File**: `docs/spec-0.1.md` (or similar - check what exists)
+
+**Changes needed**:
+- Add new section: "Context Layer Extension (Experimental)"
+- Define the minimal YAML schema for context fields
+- Specify how lineage chains work
+- Define confidence levels: `exploratory`, `working`, `validated`
+- Add validation rules for new fields
+
+**Backward compatibility**: Mark as optional extension, existing ORMD files remain valid
+
+### 3. Identify Obsolete Spec Versions
+**Task**: Review all spec-related files and identify which are outdated
+
+**Check these locations**:
+- `docs/` directory
+- Root directory files like `spec*.md` or `spec*.html`
+- Any files with "draft" or version numbers in names
+
+**Action**: 
+- List obsolete files in your response
+- Recommend moving them to `docs/archive/` or similar
+- Do NOT delete without explicit approval
+
+### 4. Create Change Documentation ORMD
+**File**: `changes/context-layer-mvp.ormd`
+
+**Content**: Document this implementation using the new format
+- Use the minimal context schema we defined
+- Set confidence: "exploratory"
+- Link to conversation lineage (this Claude session)
+- Describe what changed and why
+- Include examples of the new format
+
+### 5. Update CLI Implementation Plan
+**File**: `docs/cli-implementation-plan.md` (create if doesn't exist)
+
+**Content**: Document planned CLI changes
+- `ormd create --from-conversation`
+- `ormd link parent.ormd child.ormd`  
+- `ormd trace document.ormd`
+- Implementation priority and timeline
+
+### 6. Create Example Files
+**Directory**: `examples/`
+
+**Files to create**:
+- `examples/context-example.ormd` - Shows new context fields
+- `examples/lineage-chain/` - Folder with 2-3 linked documents showing parent-child relationships
+
+## Validation Checklist
+Before completing, verify:
+- [ ] All existing ORMD files still validate
+- [ ] README clearly explains new features as experimental
+- [ ] Spec extension doesn't break backward compatibility
+- [ ] New ORMD file uses the format it describes
+- [ ] No files deleted without explicit approval
+
+## Output Requirements
+When complete, provide:
+1. **Summary of changes made** - list all files modified/created
+2. **List of obsolete files found** - with recommendations for handling
+3. **Any issues encountered** - backward compatibility concerns, unclear requirements
+4. **Next steps suggested** - what needs to be implemented to make this functional
+
+## Context Schema Reference
+```yaml
+context:
+  lineage:
+    source: "source-identifier"
+    parent_docs: ["path/to/parent.ormd"]
+  resolution:
+    confidence: "exploratory" | "working" | "validated"
+```
+
+## Important Notes
+- This is MVP/experimental work - favor simplicity over completeness
+- Maintain all existing functionality 
+- Document everything you're uncertain about
+- Ask for clarification if requirements are ambiguous
+- Focus on making the concept testable, not production-ready

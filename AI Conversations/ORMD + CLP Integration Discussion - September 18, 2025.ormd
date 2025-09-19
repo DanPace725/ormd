@@ -1,0 +1,117 @@
+<!-- ormd:0.1 -->
+---
+title: "ORMD + CLP Integration Discussion - September 18, 2025"
+authors: ["Human", "Claude-4-Sonnet"]
+dates:
+  created: '2025-09-18T00:00:00Z'
+  modified: '2025-09-18T00:00:00Z'
+frame: "meta.project-planning"
+context:
+  lineage:
+    source: "claude-conversation-2025-09-18"
+    parent_docs: []
+  resolution:
+    confidence: "exploratory"
+links:
+  - id: bootstrap-paradox
+    rel: identifies
+    to: "#the-bootstrap-problem"
+  - id: mvp-decision
+    rel: supports
+    to: "#minimal-viable-context"
+  - id: integration-mapping
+    rel: supports
+    to: "#framework-integration"
+---
+
+# ORMD + CLP Integration Planning Session
+
+## Executive Summary
+
+Discussion exploring the integration of three complementary frameworks: **CFAR** (behavior change with resolution limits), **ORMD** (collaborative document format), and **CLP** (context-aware data layer). Key insight: ORMD can serve as the portable container for CLP's ContextBundle concept.
+
+## Framework Overview
+
+### CFAR Framework
+- **Purpose**: Constraint-Fluctuation-Attention-Resolution for behavior change
+- **Key principle**: Rayleigh-style resolution limits - don't claim more precision than system can resolve
+- **Status**: Working implementation with dashboard, API, CLI
+
+### ORMD (Open Relational Markdown)
+- **Purpose**: Next-generation document format combining Markdown simplicity with relational metadata
+- **Features**: Semantic linking, collaborative editing, cryptographic signing, git-friendly
+- **Status**: CLI implementation with create, validate, convert, pack/unpack commands
+
+### CLP (Context Layer Protocol) v0.2
+- **Purpose**: Context-aware data layer that returns answers with limits and causes attached
+- **Core**: ContextBundle format with lineage, policy, semantics, resolution limits
+- **Status**: Specification complete, implementation planned
+
+## Key Insights
+
+### Framework Synergy
+The three frameworks share a common thread: [[bootstrap-paradox]] **epistemic humility** - being honest about the limits of what we actually know versus what we're guessing.
+
+### Integration Architecture
+[[integration-mapping]] ORMD can serve as the portable container for CLP's ContextBundle:
+
+| CLP Concept | ORMD Feature | Implementation |
+|-------------|--------------|----------------|
+| Content | `.ormd` body | Human-readable source of truth |
+| Frame | YAML `frame:` field | Drives frame-bounded search |
+| Lineage | Git history + signatures | Commit graph = derivation graph |
+| Policy | `meta.json` permissions | Row-level security rules |
+| Semantics | Vector embeddings | `embedding_ref` in YAML |
+| Resolution limits | `resolution:` block | Broker enforces Rayleigh floors |
+
+## The Bootstrap Problem
+
+[[bootstrap-paradox]] The project demonstrates its own thesis: we're experiencing the exact problems these tools are designed to solve:
+
+- **Context loss**: Difficulty transferring AI conversation context between models
+- **Provenance chaos**: Coding agents making conflicting changes without coordination  
+- **Over-precision**: AI giving confident plans that break under complexity
+- **Attention budget exhaustion**: Too much information, not enough coherent meaning
+
+## Decision: Minimal Viable Context Layer
+
+[[mvp-decision]] Rather than implementing full CLP immediately, start with **one layer of context that's immediately useful**:
+
+### Proposed Spec Extension
+```yaml
+context:
+  lineage:
+    source: "claude-conversation-2025-09-18"
+    parent_docs: ["previous-discussion.ormd"]
+  resolution:
+    confidence: "exploratory" # exploratory | working | validated
+```
+
+### CLI Updates
+- `ormd create --from-conversation` - creates ORMD with lineage
+- `ormd link parent.ormd child.ormd` - updates lineage chains  
+- `ormd trace document.ormd` - shows decision/conversation chain
+
+### Success Metric
+Can hand off context between AI conversations without copy-paste hell.
+
+## Next Steps
+
+1. **Create branch**: `context-layer-mvp` in ORMD repo
+2. **Update spec** with minimal context fields
+3. **Implement CLI** conversation import functionality
+4. **Test dogfooding** - use this ORMD file to brief other AIs
+
+## Constraints & Reality
+
+Project operates under real-world constraints:
+- Limited cognitive bandwidth (AuDHD + life responsibilities)
+- Uncertain requirements (discovering while building)
+- No team to absorb complexity
+- AI collaborators with mismatched assumptions
+
+**Strategy**: Evolutionary approach with explicit experimentation bounds and resolution limits.
+
+## Meta-Observation
+
+This conversation itself validates the need for these tools - we generated 10,000+ words exploring complex interconnected ideas, hit the classic "collaboration complexity creep" problem, and needed a way to preserve context for future discussions. The tools we're building are exactly what we needed to have this conversation effectively.
