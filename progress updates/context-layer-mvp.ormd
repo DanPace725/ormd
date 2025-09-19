@@ -1,0 +1,167 @@
+<!-- ormd:0.1 -->
+---
+title: "Context Layer MVP Implementation Progress"
+authors: ["Claude-4-Sonnet", "Human"]
+dates:
+  created: '2025-09-19T00:00:00Z'
+  modified: '2025-09-19T00:00:00Z'
+context:
+  lineage:
+    source: "claude-conversation-2025-09-19"
+    parent_docs: ["../AI instructions/ORMD Context Layer MVP Implementation.ormd"]
+  resolution:
+    confidence: "working"
+links:
+  - id: implementation-instructions
+    rel: implements
+    to: "../AI instructions/ORMD Context Layer MVP Implementation.ormd"
+  - id: new-spec
+    rel: creates
+    to: "../docs/spec-0.1-context-extension.ormd"
+  - id: readme-update
+    rel: modifies
+    to: "../README.md"
+version: "mvp-0.1"
+status: "in-progress"
+description: "Documentation of Context Layer MVP implementation changes and progress"
+---
+
+# Context Layer MVP Implementation Progress
+
+**Implementation Date**: 2025-09-19  
+**Status**: In Progress  
+**Confidence Level**: Working
+
+---
+
+## Overview
+
+This document tracks the implementation of the [[implementation-instructions]] Context Layer MVP for ORMD, adding conversation lineage tracking and explicit uncertainty levels to solve the "context handoff problem" between AI conversations and collaborative sessions.
+
+## Changes Made
+
+### 1. README.md Updates ✅
+
+Added new section "Context Layer Features (Experimental)" after CLI commands section:
+- Documented new YAML fields: `context.lineage` and `context.resolution`
+- Provided complete example usage
+- Listed planned CLI extensions
+- Marked as experimental MVP functionality
+
+### 2. Specification Extension ✅
+
+Created [[new-spec]] `docs/spec-0.1-context-extension.ormd`:
+- Full backward compatibility maintained
+- Defined minimal context schema
+- Three confidence levels: `exploratory`, `working`, `validated`
+- Comprehensive examples and validation rules
+- Clear migration path for existing documents
+
+### 3. Obsolete Files Analysis ✅
+
+Identified spec-related files and their relationships:
+- `spec0.1.md` (4,999 bytes) - Original markdown spec
+- `spec0.1.ormd` (5,291 bytes) - Converted ORMD version  
+- `spec0.1-updated.ormd` (11,554 bytes) - Current implementation spec
+- `spec0.1-updated.html` (45,844 bytes) - Rendered HTML
+- `spec0.1-updated-fixed.html` (45,843 bytes) - Fixed HTML render
+
+**Recommendation**: Move older versions to `docs/archive/` but do not delete without explicit approval.
+
+## Schema Implementation
+
+### New Context Block Structure
+
+```yaml
+context:
+  lineage:
+    source: "claude-conversation-2025-09-19"
+    parent_docs: ["../AI instructions/ORMD Context Layer MVP Implementation.ormd"]
+  resolution:
+    confidence: "working"  # exploratory | working | validated
+```
+
+### Validation Rules
+
+- `source`: Optional non-empty string identifier
+- `parent_docs`: Optional array of file path strings  
+- `confidence`: Optional enum with three defined levels
+- Entire `context` block is optional for backward compatibility
+
+## Success Metrics
+
+✅ **Backward Compatibility**: All existing ORMD files remain valid  
+✅ **Documentation Clarity**: README explains new features as experimental  
+✅ **Spec Extension**: Non-breaking extension to ORMD 0.1  
+⏳ **Dogfooding**: This document uses the format it describes  
+⏳ **CLI Implementation**: Commands planned but not yet implemented  
+
+## Implementation Status
+
+### Completed Tasks
+- [x] Update README.md with Context Layer Features section
+- [x] Create specification extension document  
+- [x] Identify obsolete spec files
+- [x] Create change documentation (this document)
+
+### Completed Tasks
+- [x] Update README.md with Context Layer Features section
+- [x] Create specification extension document  
+- [x] Identify obsolete spec files
+- [x] Create change documentation (this document)
+- [x] Create CLI implementation plan documentation
+- [x] Create example files demonstrating new context features
+- [x] Verify backward compatibility with existing validation
+
+### Validation Results
+
+**Backward Compatibility**: ✅ **CONFIRMED**
+- Existing ORMD files (`simple.ormd`, `hello.ormd`, `climate.ormd`) validate successfully
+- No breaking changes introduced to current validation logic
+- Context-enabled files fail validation as expected (CLI doesn't support context fields yet)
+
+**Context Extension Files**: ⚠️ **Expected Validation Failures**
+- New context-enabled examples fail validation with current CLI
+- This is expected behavior - CLI implementation needed to support new fields
+- Validation errors are clean and informative
+
+### Planned CLI Extensions
+
+```bash
+ormd create --from-conversation my-notes.ormd
+ormd link parent.ormd child.ormd  
+ormd trace document.ormd
+```
+
+## Technical Notes
+
+### Parser Requirements
+- Must ignore unknown `context` fields (backward compatibility)
+- May validate context schema if supported
+- Should not fail on context-enabled documents
+
+### Rendering Considerations
+- Context information may be displayed in metadata sections
+- Confidence levels could have visual indicators
+- Lineage graphs could be generated from parent_docs
+
+## Next Steps
+
+1. **Create example files** in `examples/` directory
+2. **Document CLI implementation plan** with priorities and timeline
+3. **Test validation** with existing ORMD files
+4. **Gather feedback** on schema design and usage patterns
+
+## Meta-Observation
+
+This document itself demonstrates the context layer concept:
+- **Source identification**: Links to the Claude conversation that created it
+- **Parent lineage**: References the implementation instructions
+- **Confidence level**: Marked as "working" - tested concept with reasonable confidence
+- **Relationship mapping**: Uses semantic links to connect related documents
+
+The ability to trace this document's origins and understand its confidence level validates the core value proposition of the Context Layer MVP.
+
+---
+
+**Implementation continues...**

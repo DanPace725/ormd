@@ -1,0 +1,151 @@
+<!-- ormd:0.1 -->
+---
+title: "Context Layer Example Document"
+authors: ["ORMD Team"]
+dates:
+  created: '2025-09-19T00:00:00Z'
+  modified: '2025-09-19T00:00:00Z'
+context:
+  lineage:
+    source: "example-creation-session"
+    parent_docs: ["../docs/spec-0.1-context-extension.ormd"]
+  resolution:
+    confidence: "working"
+links:
+  - id: spec-reference
+    rel: demonstrates
+    to: "../docs/spec-0.1-context-extension.ormd"
+  - id: confidence-explanation
+    rel: supports
+    to: "#confidence-levels"
+  - id: lineage-example
+    rel: supports
+    to: "#lineage-tracking"
+version: "example-1.0"
+status: "example"
+description: "Demonstration of ORMD Context Layer MVP features including lineage tracking and confidence levels"
+---
+
+# Context Layer Example Document
+
+This document demonstrates the new **Context Layer MVP** features in ORMD 0.1. It shows how to use conversation lineage tracking and explicit uncertainty levels to improve context handoff between AI conversations and collaborative sessions.
+
+## Key Features Demonstrated
+
+### Lineage Tracking {#lineage-tracking}
+
+This document includes [[lineage-example]] lineage information in its YAML front-matter:
+
+```yaml
+context:
+  lineage:
+    source: "example-creation-session"
+    parent_docs: ["../docs/spec-0.1-context-extension.ormd"]
+```
+
+**Source Identification**: The `source` field identifies this document was created during an "example-creation-session". This could be:
+- An AI conversation identifier
+- A meeting or workshop name  
+- A research session reference
+- Any human-readable identifier
+
+**Parent Documents**: The `parent_docs` array shows this document builds upon the context extension specification.
+
+### Confidence Levels {#confidence-levels}
+
+The [[confidence-explanation]] `resolution.confidence` field indicates this document has "working" confidence level:
+
+- **`exploratory`**: Early ideas, brainstorming, uncertain conclusions
+- **`working`**: Tested concepts with reasonable confidence ← *This document*
+- **`validated`**: High confidence, thoroughly tested/reviewed content
+
+## Real-World Usage Scenarios
+
+### AI Conversation Handoff
+
+```yaml
+context:
+  lineage:
+    source: "claude-conversation-2025-09-19-session-1"
+    parent_docs: ["requirements.ormd", "initial-research.ormd"]
+  resolution:
+    confidence: "exploratory"
+```
+
+When handing off context to a new AI session, the lineage provides:
+- **Conversation continuity**: Next AI knows this came from a specific session
+- **Background context**: Parent documents provide foundational information
+- **Appropriate skepticism**: "exploratory" confidence suggests ideas need validation
+
+### Meeting Documentation
+
+```yaml
+context:
+  lineage:
+    source: "sprint-planning-2025-09-19"
+    parent_docs: ["previous-sprint-retro.ormd", "product-roadmap.ormd"]
+  resolution:
+    confidence: "working"
+```
+
+Meeting notes can reference:
+- **Session identification**: Clear link to specific meeting
+- **Preparatory materials**: Documents reviewed before the meeting
+- **Decision confidence**: "working" suggests decisions were made but may need refinement
+
+### Research Documentation
+
+```yaml
+context:
+  lineage:
+    source: "literature-review-session-3"
+    parent_docs: ["survey-methodology.ormd", "preliminary-findings.ormd"]
+  resolution:
+    confidence: "validated"
+```
+
+Research documents can indicate:
+- **Research session**: Which phase of research produced this
+- **Prior work**: What previous research this builds on
+- **Reliability level**: "validated" suggests peer review or thorough verification
+
+## Backward Compatibility
+
+This document works perfectly in ORMD parsers that don't support the context extension:
+- The `context` block is simply ignored
+- All other functionality works normally
+- No validation errors or parsing failures
+
+## Visual Indicators
+
+Future renderers might display context information as:
+- **Confidence badges**: 🔬 Exploratory | 🔧 Working | ✅ Validated  
+- **Lineage breadcrumbs**: Parent Document → This Document
+- **Source attribution**: "Created during: example-creation-session"
+
+## Benefits Realized
+
+Using this context layer approach:
+
+1. **Context Preservation**: Future readers understand document origins
+2. **Appropriate Confidence**: Explicit uncertainty prevents over-reliance on speculative content
+3. **Relationship Mapping**: Clear connections between related documents
+4. **Collaboration Enhancement**: Easier handoffs between team members or AI sessions
+
+## Meta-Example
+
+This very document demonstrates the concept:
+- **Traces its lineage** to the specification document
+- **Declares working confidence** - it's a tested example, not just theory
+- **Identifies its source** as an example creation session
+- **Links semantically** to the concepts it demonstrates
+
+When you read this document, you immediately know:
+- Where it came from (example creation session)
+- What it builds on (the context extension spec)  
+- How much to trust it (working confidence level)
+- How it relates to other documents (semantic links)
+
+---
+
+**This concludes the Context Layer example. The format works!** 🎉

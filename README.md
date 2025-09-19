@@ -268,6 +268,67 @@ ormd publish my-document.ormd
 # Creates self-contained .ormd.zip
 ```
 
+## Context Layer Features (Experimental)
+
+ORMD now includes experimental support for **conversation lineage tracking** and **explicit uncertainty levels**. This allows documents to carry context about their origins and confidence levels, making it easier to hand off context between AI conversations and collaborative sessions.
+
+### New YAML Fields
+
+```yaml
+context:
+  lineage:
+    source: "claude-conversation-2025-09-18"
+    parent_docs: ["previous-discussion.ormd"]
+  resolution:
+    confidence: "exploratory"  # exploratory | working | validated
+```
+
+### Context Schema
+
+- **`context.lineage.source`**: Identifier for the conversation, session, or process that created this document
+- **`context.lineage.parent_docs`**: Array of parent document paths that this document derives from or builds upon
+- **`context.resolution.confidence`**: Explicit uncertainty level:
+  - `exploratory`: Early ideas, brainstorming, uncertain conclusions
+  - `working`: Tested concepts with reasonable confidence
+  - `validated`: High confidence, tested/reviewed content
+
+### Example Usage
+
+```markdown
+<!-- ormd:0.1 -->
+---
+title: "Meeting Notes - Project Alpha"
+authors: ["Alice", "Bob"]
+context:
+  lineage:
+    source: "zoom-meeting-2025-09-18"
+    parent_docs: ["project-alpha-charter.ormd"]
+  resolution:
+    confidence: "working"
+---
+
+# Meeting Notes
+
+Based on our [[charter-review]] discussion, we've decided...
+```
+
+### Planned CLI Extensions
+
+Future CLI commands will support context management:
+
+```bash
+# Create document with conversation lineage
+ormd create --from-conversation my-notes.ormd
+
+# Link documents in parent-child relationships  
+ormd link parent.ormd child.ormd
+
+# Trace document lineage chain
+ormd trace document.ormd
+```
+
+**Note**: This is experimental MVP functionality focused on solving the "context handoff problem" between AI conversations and collaborative sessions. The schema may evolve based on usage feedback.
+
 ## The Philosophy
 
 **Documents should be:**
