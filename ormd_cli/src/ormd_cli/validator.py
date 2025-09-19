@@ -131,7 +131,7 @@ class ORMDValidator:
             # Required fields
             'title', 'authors', 'links',
             # Optional organized metadata 
-            'dates', 'metrics', 'permissions',
+            'dates', 'metrics', 'permissions', 'context',
             # Optional simple fields
             'version', 'status', 'description', 'language', 'license', 'keywords',
             # Auto-populated fields (from update command)

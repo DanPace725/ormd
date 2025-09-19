@@ -1,0 +1,76 @@
+<!-- ormd:0.1 -->
+---
+title: "ORMD CLI: Parser and Validator Logic"
+authors: ["Jules"]
+dates:
+  created: '2025-09-18T20:54:00Z'
+context:
+  lineage:
+    source: "jules-documentation-session-2025-09-18"
+  resolution:
+    confidence: "validated"
+status: "draft"
+description: "An explanation of the internal logic for the ORMD parser and validator, including the new context block handling."
+---
+
+# ORMD CLI: Parser and Validator Logic
+
+This document details the internal workings of the ORMD CLI's parsing and validation components. Understanding this logic is key for extending the ORMD specification and for debugging validation issues.
+
+The process is handled by three main files:
+- `ormd_cli/src/ormd_cli/parser.py`
+- `ormd_cli/src/ormd_cli/validator.py`
+- `ormd_cli/src/ormd_cli/schema.py`
+
+## 1. The Parsing Process (`parser.py`)
+
+The parser's primary role is to separate an ORMD file's content into its two main components: the YAML front-matter and the Markdown body.
+
+### `parse_document(content)`
+
+This is the main entry point in the parser. It performs the following steps:
+1.  **Version Tag Check**: It first looks for the `<!-- ormd:0.1 -->` tag at the beginning of the document. If it's missing, it returns an error.
+2.  **Front-Matter Extraction**: It uses a helper function, `_parse_front_matter_and_body`, to find and extract the YAML block delimited by `---`.
+3.  **YAML Parsing**: The extracted YAML block is parsed into a Python dictionary using the `PyYAML` library (`yaml.safe_load`).
+4.  **Error Handling**: It checks for basic parsing errors, such as invalid YAML or multiple front-matter blocks.
+
+The parser itself does not validate the *content* of the front-matter, only its structure as a valid YAML block.
+
+### `serialize_front_matter(front_matter_dict)`
+
+This function is used when the CLI needs to modify and save an ORMD file. It takes a front-matter dictionary and converts it back into a YAML string, ensuring a consistent field order for readability.
+
+## 2. The Validation Process (`validator.py` and `schema.py`)
+
+Validation is a two-stage process orchestrated by `validator.py` but with the detailed schema rules defined in `schema.py`.
+
+### Stage 1: High-Level Validation (`validator.py`)
+
+The `ORMDValidator` class in `validator.py` is the main entry point for the `ormd validate` command. Its `validate_file` method performs a series of checks:
+
+1.  **File Reading & Parsing**: It reads the file and uses `parser.parse_document` to get the front-matter dictionary.
+2.  **Required Fields Check**: It ensures that `title`, `authors`, and `links` are present.
+3.  **Strict Schema Check (`_validate_schema_strict`)**: This is a key step.
+    - It checks for **unknown top-level fields** in the front-matter. There is a hardcoded set of allowed keys. Any field not in this set will cause a validation failure. This is where the `context` block was added as an allowed key.
+    - If there are no unknown keys, it proceeds to the next stage.
+4.  **Link Consistency Check**: It verifies that all `[[link-ids]]` in the body are defined in the front-matter's `links` section.
+
+### Stage 2: Detailed Schema Validation (`schema.py`)
+
+The `FrontMatterValidator` class in `schema.py` is responsible for the detailed, field-by-field validation of the front-matter content.
+
+- **Dataclasses**: The file defines a series of Python dataclasses (`Author`, `Link`, `Dates`, etc.) that represent the official ORMD schema.
+- **Validation Methods**: For each field in the front-matter, there is a corresponding `_validate_...` method (e.g., `_validate_title`, `_validate_authors`). These methods check for correct data types, required sub-fields, and valid values (e.g., enums for `status` or `confidence`).
+
+## 3. Handling the `context` Block
+
+The new `context` block is handled using the same process:
+
+1.  **Parsing (`parser.py`)**: The parser automatically handles the `context` block because `yaml.safe_load` will parse any valid YAML structure. The `serialize_front_matter` function was updated to ensure `context` is ordered logically with other metadata blocks.
+2.  **High-Level Validation (`validator.py`)**: The `'context'` key was added to the `allowed_keys` set in `_validate_schema_strict` to prevent it from being rejected as an unknown field.
+3.  **Detailed Validation (`schema.py`)**:
+    - New dataclasses (`Context`, `Lineage`, `Resolution`) were added to define the block's structure.
+    - A new `_validate_context` method was added to `FrontMatterValidator`, which in turn calls `_validate_lineage` and `_validate_resolution` to check the sub-fields.
+    - This ensures that the `source` is a string, `parent_docs` is a list of strings, and `confidence` is one of the allowed enum values (`exploratory`, `working`, `validated`).
+
+This approach makes the `context` block a fully integrated and validated part of the ORMD specification, while maintaining backward compatibility for documents that do not include it.

@@ -139,7 +139,7 @@ def serialize_front_matter(front_matter: Dict) -> str:
             ordered_fm[field] = front_matter[field]
     
     # 2. Organized metadata namespaces
-    for namespace in ['dates', 'metrics', 'permissions']:
+    for namespace in ['dates', 'metrics', 'permissions', 'context']:
         if namespace in front_matter:
             ordered_fm[namespace] = front_matter[namespace]
     
