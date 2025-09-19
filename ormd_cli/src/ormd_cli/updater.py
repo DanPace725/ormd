@@ -283,7 +283,14 @@ class ORMDUpdater:
             if fm_start < len(lines):
                 original_delimiter = lines[fm_start].strip()
                 if original_delimiter == '+++':
-                    serialized_fm = serialized_fm.replace('---', '+++')
+                    # Replace only the YAML block delimiters, not any '---' that
+                    # may appear inside the YAML content itself.
+                    fm_lines = serialized_fm.rstrip('\n').split('\n')
+                    if fm_lines and fm_lines[0] == '---':
+                        fm_lines[0] = '+++'
+                    if fm_lines and fm_lines[-1] == '---':
+                        fm_lines[-1] = '+++'
+                    serialized_fm = '\n'.join(fm_lines) + '\n'
             
             new_lines.append(serialized_fm)
             
