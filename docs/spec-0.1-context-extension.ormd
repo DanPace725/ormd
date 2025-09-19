@@ -1,0 +1,236 @@
+<!-- ormd:0.1 -->
+---
+title: "ORMD 0.1 Context Layer Extension (Experimental)"
+authors:
+  - id: ormd-team
+    display: ORMD Development Team
+dates:
+  created: '2025-09-19T00:00:00Z'
+  modified: '2025-09-19T00:00:00Z'
+links:
+  - id: base-spec
+    rel: extends
+    to: "../spec0.1-updated.ormd"
+  - id: mvp-implementation
+    rel: implements
+    to: "../AI instructions/ORMD Context Layer MVP Implementation.ormd"
+  - id: clp-integration
+    rel: derives_from
+    to: "../AI Conversations/ORMD + CLP Integration Discussion - September 18, 2025.ormd"
+context:
+  lineage:
+    source: "claude-conversation-2025-09-19"
+    parent_docs: ["../spec0.1-updated.ormd"]
+  resolution:
+    confidence: "exploratory"
+version: "0.1-context-extension"
+status: "experimental"
+description: "Experimental extension to ORMD 0.1 adding conversation lineage tracking and explicit uncertainty levels"
+---
+
+# ORMD 0.1 Context Layer Extension (Experimental)
+
+**Version:** 0.1-context-extension | **Date:** 2025-09-19 | **Status:** Experimental
+
+---
+
+## 1. Overview
+
+This specification extends [[base-spec]] ORMD 0.1 with experimental context layer functionality. The extension adds support for:
+
+- **Conversation lineage tracking** - Documents can reference their origins and parent documents
+- **Explicit uncertainty levels** - Authors can specify confidence in their content
+- **Context handoff** - Improved ability to transfer context between AI conversations and collaborative sessions
+
+This extension is **backward compatible** - existing ORMD 0.1 documents remain fully valid. The new fields are optional and ignored by parsers that don't support them.
+
+## 2. Problem Statement
+
+The [[mvp-implementation]] Context Layer MVP addresses specific pain points in collaborative knowledge work:
+
+- **Context loss**: Difficulty transferring conversation context between AI models or collaborative sessions
+- **Over-precision**: Documents that claim more certainty than warranted by their evidence
+- **Provenance chaos**: Lost track of how documents relate to their sources and predecessors
+
+## 3. Context Schema Extension
+
+### 3.1 New YAML Fields
+
+The context extension adds an optional `context` block to the YAML front-matter:
+
+```yaml
+context:
+  lineage:
+    source: "identifier-string"
+    parent_docs: ["path/to/parent.ormd", "path/to/other-parent.ormd"]
+  resolution:
+    confidence: "exploratory" | "working" | "validated"
+```
+
+### 3.2 Field Definitions
+
+#### `context.lineage.source` (optional string)
+
+Identifier for the conversation, session, or process that created this document. Examples:
+- `"claude-conversation-2025-09-19"`
+- `"zoom-meeting-project-alpha"`
+- `"email-thread-budget-discussion"`
+- `"manual-research-session"`
+
+**Validation**: Must be a non-empty string if present. No format requirements to allow flexibility.
+
+#### `context.lineage.parent_docs` (optional array of strings)
+
+Array of document paths that this document derives from, builds upon, or references as foundational. Paths should be relative to the current document or absolute.
+
+**Validation**: 
+- Must be an array of strings if present
+- Each string should be a valid file path (not validated for existence)
+- Empty array is valid
+
+#### `context.resolution.confidence` (optional enum)
+
+Explicit uncertainty level indicating the author's confidence in the document's content:
+
+- **`"exploratory"`**: Early ideas, brainstorming, uncertain conclusions. Content is speculative or in early development.
+- **`"working"`**: Tested concepts with reasonable confidence. Content has been reviewed or validated to some degree.
+- **`"validated"`**: High confidence, thoroughly tested/reviewed content. Content is considered reliable and well-supported.
+
+**Validation**: Must be one of the three specified values if present.
+
+## 4. Backward Compatibility
+
+### 4.1 Parser Behavior
+
+Parsers that do not support the context extension:
+- **MUST** ignore the `context` block entirely
+- **MUST** continue to validate and process all other YAML fields normally
+- **MUST NOT** fail validation due to unknown `context` fields
+
+Parsers that support the context extension:
+- **MAY** validate the context schema
+- **MAY** use context information for enhanced functionality
+- **MUST** continue to support documents without context blocks
+
+### 4.2 Rendering Behavior
+
+Renderers **MAY** choose to:
+- Display context information in document metadata sections
+- Create visual indicators for confidence levels
+- Generate lineage graphs or parent document links
+- Ignore context information entirely
+
+## 5. Usage Examples
+
+### 5.1 Meeting Notes Example
+
+```markdown
+<!-- ormd:0.1 -->
+---
+title: "Sprint Planning - Week 42"
+authors: ["Alice Johnson", "Bob Smith"]
+dates:
+  created: '2025-09-19T14:30:00Z'
+context:
+  lineage:
+    source: "zoom-meeting-sprint-42"
+    parent_docs: ["../previous-sprint/sprint-41-retro.ormd"]
+  resolution:
+    confidence: "working"
+---
+
+# Sprint Planning Notes
+
+Based on our [[retro-review]] retrospective, we identified...
+```
+
+### 5.2 Research Document Example
+
+```markdown
+<!-- ormd:0.1 -->
+---
+title: "Market Analysis - Preliminary Findings"
+authors: ["Research Team"]
+context:
+  lineage:
+    source: "research-session-2025-09-19"
+    parent_docs: ["survey-data.ormd", "competitor-analysis.ormd"]
+  resolution:
+    confidence: "exploratory"
+---
+
+# Preliminary Market Analysis
+
+**Note**: This analysis is exploratory and requires further validation.
+
+Our initial findings suggest...
+```
+
+### 5.3 AI Conversation Handoff Example
+
+```markdown
+<!-- ormd:0.1 -->
+---
+title: "Technical Architecture Decisions"
+authors: ["Claude-4", "Human"]
+context:
+  lineage:
+    source: "claude-conversation-2025-09-19"
+    parent_docs: ["requirements.ormd"]
+  resolution:
+    confidence: "working"
+---
+
+# Architecture Decisions
+
+This document captures the technical decisions from our AI-assisted design session...
+```
+
+## 6. Implementation Notes
+
+### 6.1 CLI Extensions (Planned)
+
+Future CLI commands will support context management:
+
+```bash
+# Create document with conversation lineage
+ormd create --from-conversation my-notes.ormd
+
+# Link documents in parent-child relationships  
+ormd link parent.ormd child.ormd
+
+# Trace document lineage chain
+ormd trace document.ormd
+```
+
+### 6.2 Validation Rules
+
+Context-aware validators should check:
+- Valid confidence levels
+- Proper array structure for parent_docs
+- Non-empty strings where required
+
+### 6.3 Migration Path
+
+Existing ORMD documents require no changes. Authors can opt-in to context features by adding the `context` block to their YAML front-matter.
+
+## 7. Future Considerations
+
+This experimental extension may evolve based on usage feedback:
+
+- Additional confidence levels or granularity
+- Structured metadata for source types
+- Integration with external context systems
+- Enhanced lineage validation and visualization
+
+## 8. Relationship to CLP Integration
+
+This context extension serves as a stepping stone toward [[clp-integration]] full Context Layer Protocol integration. The minimal schema provides immediate value while establishing patterns for future CLP features:
+
+- `context.lineage` maps to CLP's lineage tracking
+- `context.resolution.confidence` aligns with CLP's resolution limits
+- Document-level context prepares for CLP's ContextBundle concept
+
+---
+
+**Implementation Status**: Experimental - schema defined, CLI implementation pending, feedback welcome.

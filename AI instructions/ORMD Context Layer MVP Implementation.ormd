@@ -4,7 +4,7 @@
 You are implementing a minimal viable context layer for ORMD that adds conversation lineage tracking and explicit uncertainty levels. This is exploratory work to validate the concept before full CLP integration.
 
 ## Pre-work Setup
-1. **Create new branch**: `context-layer-mvp` from current main branch
+1. **Create new branch**: `context-layer-mvp` from current main branch - user will do this
 2. **Ensure you're working in the ORMD repository** (should contain `ormd_cli/`, `examples/`, `docs/`, etc.)
 
 ## Task List
@@ -20,8 +20,8 @@ You are implementing a minimal viable context layer for ORMD that adds conversat
 
 **Keep existing**: All current installation, usage, and CLI documentation
 
-### 2. Update Specification Document
-**File**: `docs/spec-0.1.md` (or similar - check what exists)
+### 2. Create new spec.ormd file
+** Old reference File**: `docs/spec-0.1.ormd` ()
 
 **Changes needed**:
 - Add new section: "Context Layer Extension (Experimental)"
@@ -46,7 +46,7 @@ You are implementing a minimal viable context layer for ORMD that adds conversat
 - Do NOT delete without explicit approval
 
 ### 4. Create Change Documentation ORMD
-**File**: `changes/context-layer-mvp.ormd`
+**File**: `progress updates/context-layer-mvp.ormd`
 
 **Content**: Document this implementation using the new format
 - Use the minimal context schema we defined
