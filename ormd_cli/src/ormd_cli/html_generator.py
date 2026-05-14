@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .utils import get_view_template, SYMBOLS
+from .parser import _split_inline_link_inner
 
 # Index for iterating through auto_links_from_parser in the replace_inline_link_match function
 # This assumes that the regex finditer and the auto_links_from_parser list are in the same order.
@@ -14,8 +15,7 @@ def _replace_inline_link_match(match: re.Match, auto_links_from_parser: List[Dic
     global _current_auto_id_index_for_inline_links
     
     text = match.group(1)
-    target = match.group(2)
-    rel = match.group(3)  # Might be None
+    target, rel = _split_inline_link_inner(match.group(2))
 
     if _current_auto_id_index_for_inline_links >= len(auto_links_from_parser):
         # This case should ideally not happen if parser and regex are in sync.
@@ -65,7 +65,7 @@ def _preprocess_body_links(
     _current_auto_id_index_for_inline_links = 0 # Reset for each call
 
     # Stage 1: Replace Inline Semantic Links [text](target "rel")
-    inline_link_regex = re.compile(r'\[([^\]]+?)\]\(([^)]+?)(?:\s+"([^"]+?)")?\)')
+    inline_link_regex = re.compile(r'\[([^\]]+?)\]\(([^)]*?)\)')
     
     # Curry auto_links_from_parser into the replacement function
     def stage1_repl_func(match):

@@ -110,6 +110,7 @@ Thumbs.db
 
 # Custom for your project
 ormd_cli.egg-info/
+node_modules/
 
 # Build artifacts
 ormd_cli.egg-info/

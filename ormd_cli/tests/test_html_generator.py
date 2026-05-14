@@ -172,4 +172,3 @@ Finally, a reference to [[auto-link-1]] (if it were updated into FM) and [[non-e
         assert '<a href="#t2" data-link-id="link2">Display Text from Manual Title</a>' in processed_body
         assert '<a href="#t3" data-link-id="link3">link3</a>' in processed_body
 
-```

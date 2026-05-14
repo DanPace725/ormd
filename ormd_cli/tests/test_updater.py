@@ -274,7 +274,7 @@ Content here.
             
             # Read back the updated file
             updated_content = Path(temp_path).read_text(encoding='utf-8')
-            front_matter, _, _, _ = parse_document(updated_content)
+            front_matter, _, _, _, _ = parse_document(updated_content)
             
             # Check that existing fields are preserved
             assert front_matter['version'] == "1.0"
@@ -308,7 +308,7 @@ This document has no front-matter initially.
             
             # Read back the updated file
             updated_content = Path(temp_path).read_text(encoding='utf-8')
-            front_matter, body, _, _ = parse_document(updated_content)
+            front_matter, body, _, _, _ = parse_document(updated_content)
             
             # Check that front-matter was created
             assert front_matter is not None

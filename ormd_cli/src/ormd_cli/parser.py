@@ -48,9 +48,9 @@ def parse_document(content: str) -> Tuple[Optional[Dict], str, Optional[Dict[str
         # If no front-matter delimiters at all, it's a valid document with an empty front_matter
         front_matter = {}
     else: # Valid initial front-matter was found
-        # Check for subsequent YAML block delimiters in the body
-        # This regex looks for '---' or '+++' at the beginning of a line, possibly with spaces before it.
-        if re.search(r'^\s*(---\s*$|\+\+\+\s*$)', body, re.MULTILINE):
+        # Check for subsequent YAML-like front-matter blocks in the body while
+        # ignoring fenced code blocks and ordinary delimiter prose.
+        if _body_has_additional_front_matter_block(body):
             errors.append("Error: Multiple YAML front-matter blocks found. Only one is allowed at the beginning of the document.")
 
     # Error for legacy +++meta blocks
@@ -60,11 +60,10 @@ def parse_document(content: str) -> Tuple[Optional[Dict], str, Optional[Dict[str
         errors.append("Error: `+++end-meta` blocks are no longer supported.")
 
     # Parse inline semantic links
-    inline_link_pattern = r'\[([^\]]+)\]\(([^\)]+)(?:\s+"([^\"]+)")?\)'
+    inline_link_pattern = r'\[([^\]]+)\]\(([^)]*)\)'
     for match in re.finditer(inline_link_pattern, body):
         display_text = match.group(1)
-        target = match.group(2)
-        relationship = match.group(3)  # This will be None if not present
+        target, relationship = _split_inline_link_inner(match.group(2))
 
         link_data = {
             "id": f"auto-link-{link_id_counter}",
@@ -77,6 +76,48 @@ def parse_document(content: str) -> Tuple[Optional[Dict], str, Optional[Dict[str
         link_id_counter += 1
     
     return front_matter, body, None, auto_links, errors
+
+
+def _split_inline_link_inner(inner: str) -> Tuple[str, Optional[str]]:
+    """Split the inside of ``[text](target "rel")`` into target and rel."""
+    inner = inner.strip()
+    rel_match = re.match(r'^(?P<target>.+?)\s+(?P<quote>["\'])(?P<rel>[^"\']+)(?P=quote)$', inner)
+    if rel_match:
+        return rel_match.group('target').strip(), rel_match.group('rel')
+    return inner, None
+
+
+def _body_has_additional_front_matter_block(body: str) -> bool:
+    """Detect YAML-like delimiter blocks in body, excluding fenced code."""
+    lines = body.splitlines()
+    in_fence = False
+    fence_marker = None
+
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        fence_match = re.match(r'^(```+|~~~+)', stripped)
+        if fence_match:
+            marker = fence_match.group(1)[0]
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker
+            elif stripped.startswith(fence_marker * 3):
+                in_fence = False
+                fence_marker = None
+            continue
+
+        if in_fence or stripped not in ('---', '+++'):
+            continue
+
+        delimiter = stripped
+        block_lines = []
+        for later_line in lines[index + 1:]:
+            later_stripped = later_line.strip()
+            if later_stripped == delimiter:
+                return any(':' in block_line for block_line in block_lines)
+            block_lines.append(later_line)
+
+    return False
 
 
 def _parse_front_matter_and_body(content: str) -> Tuple[Optional[Dict], str]:

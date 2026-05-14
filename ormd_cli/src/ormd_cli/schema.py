@@ -327,7 +327,7 @@ class FrontMatterValidator:
             self.errors.append(f"Field '{field_name}' contains an invalid date value")
 
 # Define approved link relationships at the module level
-APPROVED_LINK_RELATIONSHIPS: Set[str] = {"supports", "refutes", "cites", "references", "related"}
+APPROVED_LINK_RELATIONSHIPS: Set[str] = {"supports", "refutes", "cites", "references", "related", "extends", "rel"}
 
 def validate_front_matter_schema(front_matter: Dict[str, Any]) -> tuple[bool, List[str]]:
     """

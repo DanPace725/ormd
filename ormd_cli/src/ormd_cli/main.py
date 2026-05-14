@@ -23,6 +23,7 @@ import json # Used by render, open, edit
 from .server import _serve_and_open
 from .html_generator import _generate_viewable_html, _generate_editable_html, generate_render_html
 from .logger import setup_logging, logger # Added
+from .converter import _parse_pdf_date_string
 # get_edit_template, _generate_viewable_html, _generate_editable_html, markdown and re imports removed as logic moved.
 
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))

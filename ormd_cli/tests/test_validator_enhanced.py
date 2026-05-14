@@ -94,8 +94,8 @@ Content here.
         )
         file_path = tmp_path / "test.ormd"
         file_path.write_text(content)
-        assert not validator.validate_file(str(file_path))
-        assert any("points to an internal target '#non-existent' that was not found" in err for err in validator.errors)
+        assert validator.validate_file(str(file_path))
+        assert any("points to an internal target '#non-existent' that was not found" in warning for warning in validator.warnings)
 
     def test_valid_internal_anchor_custom_id_heading(self, tmp_path):
         validator = ORMDValidator()

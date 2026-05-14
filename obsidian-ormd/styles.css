@@ -1,0 +1,15 @@
+.ormd-status {
+  color: var(--text-muted);
+}
+
+.ormd-status.is-valid {
+  color: var(--text-success);
+}
+
+.ormd-status.has-errors {
+  color: var(--text-error);
+}
+
+.ormd-status.has-warnings {
+  color: var(--text-warning);
+}

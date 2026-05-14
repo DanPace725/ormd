@@ -37,7 +37,7 @@ class TestConvertCommand:
         assert ormd_content_full.startswith("<!-- ormd:0.1 -->\n"), "Missing or incorrect ORMD version comment"
 
         # parse_document expects the version tag to be part of the content passed to it.
-        front_matter, body, _, parse_errors = parse_document(ormd_content_full)
+        front_matter, body, _, _, parse_errors = parse_document(ormd_content_full)
 
         assert not parse_errors, f"Parsing errors in generated ORMD: {parse_errors}"
         assert front_matter is not None, "Front-matter is missing or invalid in generated ORMD"
@@ -96,7 +96,7 @@ class TestConvertCommand:
         ormd_content_full = output_filepath.read_text(encoding='utf-8')
         assert ormd_content_full.startswith("<!-- ormd:0.1 -->\n")
 
-        front_matter, body, _, parse_errors = parse_document(ormd_content_full)
+        front_matter, body, _, _, parse_errors = parse_document(ormd_content_full)
 
         assert not parse_errors, f"Parsing errors in generated ORMD (auto-detect): {parse_errors}"
         assert front_matter is not None, "Front-matter is missing (auto-detect)"
@@ -136,7 +136,7 @@ class TestConvertCommand:
         ormd_content_full = output_filepath.read_text(encoding='utf-8')
         assert ormd_content_full.startswith("<!-- ormd:0.1 -->\n")
 
-        front_matter, body, _, parse_errors = parse_document(ormd_content_full)
+        front_matter, body, _, _, parse_errors = parse_document(ormd_content_full)
 
         assert not parse_errors, f"Parsing errors in generated ORMD (MD no FM): {parse_errors}"
         assert front_matter is not None, "Front-matter is missing (MD no FM)"
@@ -188,7 +188,7 @@ This is the actual body content.
         ormd_content_full = output_filepath.read_text(encoding='utf-8')
         assert ormd_content_full.startswith("<!-- ormd:0.1 -->\n")
 
-        front_matter, body, _, parse_errors = parse_document(ormd_content_full)
+        front_matter, body, _, _, parse_errors = parse_document(ormd_content_full)
 
         assert not parse_errors, f"Parsing errors in generated ORMD (MD with FM): {parse_errors}"
         assert front_matter is not None, "Front-matter is missing (MD with FM)"
@@ -244,7 +244,7 @@ Content after plus front-matter.
         assert output_filepath.exists()
 
         ormd_content_full = output_filepath.read_text(encoding='utf-8')
-        front_matter, body, _, parse_errors = parse_document(ormd_content_full)
+        front_matter, body, _, _, parse_errors = parse_document(ormd_content_full)
 
         assert not parse_errors
         assert front_matter is not None
@@ -300,7 +300,7 @@ This is an ORMD document.
         assert output_filepath.exists()
 
         ormd_content_full = output_filepath.read_text(encoding='utf-8')
-        front_matter, body, _, parse_errors = parse_document(ormd_content_full)
+        front_matter, body, _, _, parse_errors = parse_document(ormd_content_full)
 
         assert not parse_errors, f"Parsing errors: {parse_errors}"
         assert front_matter is not None

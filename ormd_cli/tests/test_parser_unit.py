@@ -27,7 +27,7 @@ links: []
 Just a simple paragraph.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter is not None
@@ -48,7 +48,7 @@ links: []
 
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter is not None
@@ -70,7 +70,7 @@ This document has no semantic links defined.
 No [[references]] to anything.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter['links'] == []
@@ -93,7 +93,7 @@ links:
 This uses +++ delimiters and references [[test-link]].
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter['title'] == "Plus Delimiter Document"
@@ -141,7 +141,7 @@ This document has complex front-matter with all optional fields.
 Content referencing [[ref1]] and [[ref2]].
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter['title'] == "Complex Document"
@@ -171,7 +171,7 @@ invalid_yaml: this is not valid: yaml: syntax
 Body content here.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert errors
         assert any("Invalid YAML" in error for error in errors)
@@ -190,7 +190,7 @@ links: []
 Body without version tag.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         # Parser should fail when missing version tag
         assert front_matter is None
@@ -206,7 +206,7 @@ Body without version tag.
 This document has no front-matter at all.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter == {}  # Parser converts None to empty dict
@@ -225,7 +225,7 @@ links: []
 This front-matter is never closed.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         # Should return None when front-matter is unclosed and treat entire content as body
         assert front_matter is None
@@ -251,7 +251,7 @@ legacy_field: "This should generate an error"
 More content.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert front_matter is not None # Parser might still return front_matter
         assert any("`+++meta` blocks are no longer supported" in error for error in errors)
@@ -276,7 +276,7 @@ problem: true
 
 More body content.
 '''
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         assert front_matter is not None # The first FM should parse
         assert any("Multiple YAML front-matter blocks found" in error for error in errors)
         assert "another_title" in body # The second block is part of the body now
@@ -285,7 +285,7 @@ More body content.
         """Test parsing fixture with legacy +++meta block."""
         fixture_path = Path(__file__).parent / "fixtures" / "invalid_legacy_meta.ormd"
         content = fixture_path.read_text(encoding='utf-8')
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         assert front_matter is not None
         assert any("`+++meta` blocks are no longer supported" in error for error in errors)
 
@@ -293,7 +293,7 @@ More body content.
         """Test parsing fixture with multiple YAML blocks."""
         fixture_path = Path(__file__).parent / "fixtures" / "invalid_multiple_yaml.ormd"
         content = fixture_path.read_text(encoding='utf-8')
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         assert front_matter is not None
         assert any("Multiple YAML front-matter blocks found" in error for error in errors)
 
@@ -387,7 +387,7 @@ not front-matter
 +++
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter['title'] == "Delimiter Collision Document"
@@ -527,10 +527,10 @@ This body has no inline semantic links. Only [[legacy-style]] ones.
         """Test parsing an empty document (except version tag) for inline links."""
         content = '''<!-- ormd:0.1 -->
 '''
-        # This will have parse errors for missing front-matter, but auto_links should still be empty.
+        # Parsing allows a version-only document; validation enforces required front-matter.
         front_matter, body, metadata, auto_links, errors = parse_document(content)
-        assert errors # Expect errors due to missing required front-matter
-        assert front_matter is None # or {} depending on how parser handles full failure
+        assert not errors
+        assert front_matter == {}
         assert body == "" 
         assert len(auto_links) == 0
 

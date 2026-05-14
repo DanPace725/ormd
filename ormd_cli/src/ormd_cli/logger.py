@@ -1,5 +1,6 @@
 import logging
 import click # Not strictly needed here but good for consistency if SYMBOLS were used
+import sys
 
 # Define custom log levels if needed, or use standard ones
 # For simplicity, we'll map verbose to DEBUG and quiet to CRITICAL or suppress.
@@ -7,7 +8,13 @@ import click # Not strictly needed here but good for consistency if SYMBOLS were
 logger = logging.getLogger("ormd_cli")
 
 def setup_logging(verbose: bool, quiet: bool):
-    handler = logging.StreamHandler()
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+    handler = logging.StreamHandler(sys.stdout)
     # Basic formatter, can be enhanced
     formatter = logging.Formatter("%(message)s")
     # For verbose, a more detailed formatter might be:

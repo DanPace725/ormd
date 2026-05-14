@@ -11,8 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Set, Any, Tuple, Optional
 from .parser import parse_document, serialize_front_matter
-
-logger = logging.getLogger(__name__)
+from .logger import logger
 
 class ORMDUpdater:
     """Updates and syncs front-matter metadata in ORMD documents."""
@@ -82,6 +81,12 @@ class ORMDUpdater:
             final_links.extend(manual_links)
             
             processed_auto_link_targets_rels = set(manual_link_tuples)
+            next_auto_link_id = 1
+            for link in final_links:
+                link_id = link.get('id') if isinstance(link, dict) else None
+                match = re.match(r'^auto-link-(\d+)$', link_id or '')
+                if match:
+                    next_auto_link_id = max(next_auto_link_id, int(match.group(1)) + 1)
 
             for auto_link in auto_links:
                 auto_link_tuple = (auto_link['target'], auto_link['rel'])
@@ -92,15 +97,21 @@ class ORMDUpdater:
                 
                 if auto_link['target'] in manual_link_tos:
                     # Conflict: same target, different relationship or manual has no rel
-                    logger.warning(
+                    warning_message = (
                         f"Conflict in {file_path}: Auto-generated link {auto_link['id']} for target "
                         f"'{auto_link['target']}' with relationship '{auto_link['rel']}' conflicts with an "
                         f"existing manual link with a different relationship. Adding auto-link for now."
                     )
+                    logger.warning(warning_message)
+                    logging.warning(warning_message)
                     # As per instructions, add the auto-link for now.
                     # Future enhancements could involve more sophisticated conflict resolution.
                 
-                final_links.append(auto_link)
+                auto_link_to_add = auto_link.copy()
+                auto_link_to_add['id'] = f"auto-link-{next_auto_link_id}"
+                next_auto_link_id += 1
+
+                final_links.append(auto_link_to_add)
                 processed_auto_link_targets_rels.add(auto_link_tuple)
 
             if original_front_matter.get('links', []) != final_links:
