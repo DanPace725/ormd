@@ -1,0 +1,10 @@
+{
+  "id": "ormd",
+  "name": "ORMD",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Open, validate, and lightly enhance Open Relational Markdown files.",
+  "author": "Open Relational Markdown",
+  "authorUrl": "https://github.com/open-relational-markdown",
+  "isDesktopOnly": false
+}

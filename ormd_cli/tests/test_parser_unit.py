@@ -27,7 +27,7 @@ links: []
 Just a simple paragraph.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter is not None
@@ -48,7 +48,7 @@ links: []
 
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter is not None
@@ -70,7 +70,7 @@ This document has no semantic links defined.
 No [[references]] to anything.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter['links'] == []
@@ -93,7 +93,7 @@ links:
 This uses +++ delimiters and references [[test-link]].
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter['title'] == "Plus Delimiter Document"
@@ -141,7 +141,7 @@ This document has complex front-matter with all optional fields.
 Content referencing [[ref1]] and [[ref2]].
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter['title'] == "Complex Document"
@@ -171,7 +171,7 @@ invalid_yaml: this is not valid: yaml: syntax
 Body content here.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert errors
         assert any("Invalid YAML" in error for error in errors)
@@ -190,7 +190,7 @@ links: []
 Body without version tag.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         # Parser should fail when missing version tag
         assert front_matter is None
@@ -206,7 +206,7 @@ Body without version tag.
 This document has no front-matter at all.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter == {}  # Parser converts None to empty dict
@@ -225,7 +225,7 @@ links: []
 This front-matter is never closed.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         # Should return None when front-matter is unclosed and treat entire content as body
         assert front_matter is None
@@ -251,7 +251,7 @@ legacy_field: "This should generate an error"
 More content.
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert front_matter is not None # Parser might still return front_matter
         assert any("`+++meta` blocks are no longer supported" in error for error in errors)
@@ -276,7 +276,7 @@ problem: true
 
 More body content.
 '''
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         assert front_matter is not None # The first FM should parse
         assert any("Multiple YAML front-matter blocks found" in error for error in errors)
         assert "another_title" in body # The second block is part of the body now
@@ -285,7 +285,7 @@ More body content.
         """Test parsing fixture with legacy +++meta block."""
         fixture_path = Path(__file__).parent / "fixtures" / "invalid_legacy_meta.ormd"
         content = fixture_path.read_text(encoding='utf-8')
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         assert front_matter is not None
         assert any("`+++meta` blocks are no longer supported" in error for error in errors)
 
@@ -293,7 +293,7 @@ More body content.
         """Test parsing fixture with multiple YAML blocks."""
         fixture_path = Path(__file__).parent / "fixtures" / "invalid_multiple_yaml.ormd"
         content = fixture_path.read_text(encoding='utf-8')
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         assert front_matter is not None
         assert any("Multiple YAML front-matter blocks found" in error for error in errors)
 
@@ -387,10 +387,200 @@ not front-matter
 +++
 '''
         
-        front_matter, body, metadata, errors = parse_document(content)
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
         
         assert not errors
         assert front_matter['title'] == "Delimiter Collision Document"
         assert "---" in body
         assert "+++" in body
-        assert "not front-matter" in body 
+        assert "not front-matter" in body
+
+    def test_parse_single_inline_link_with_rel(self):
+        """Test parsing a single inline semantic link with a relationship."""
+        content = '''<!-- ormd:0.1 -->
+---
+title: "Inline Link Test"
+authors: ["Test Author"]
+links: []
+---
+
+This is a [display text](https://example.com/target "supports") link.
+'''
+        # Expected return: front_matter, body, metadata (None), auto_links, errors
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
+        
+        assert not errors
+        assert front_matter is not None
+        assert len(auto_links) == 1
+        link1 = auto_links[0]
+        assert link1['id'] == 'auto-link-1'
+        assert link1['text'] == 'display text'
+        assert link1['target'] == 'https://example.com/target'
+        assert link1['rel'] == 'supports'
+        assert link1['source'] == 'inline'
+        assert "This is a [display text](https://example.com/target \"supports\") link." in body # Body remains unchanged by parser for this
+
+    def test_parse_single_inline_link_no_rel(self):
+        """Test parsing a single inline semantic link without a relationship."""
+        content = '''<!-- ormd:0.1 -->
+---
+title: "Inline Link No Rel Test"
+authors: ["Test Author"]
+links: []
+---
+
+Link: [another text](#internal-target).
+'''
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
+        
+        assert not errors
+        assert front_matter is not None
+        assert len(auto_links) == 1
+        link1 = auto_links[0]
+        assert link1['id'] == 'auto-link-1'
+        assert link1['text'] == 'another text'
+        assert link1['target'] == '#internal-target'
+        assert link1['rel'] is None
+        assert link1['source'] == 'inline'
+
+    def test_parse_multiple_inline_links(self):
+        """Test parsing multiple inline semantic links in order."""
+        content = '''<!-- ormd:0.1 -->
+---
+title: "Multiple Inline Links"
+authors: ["Test Author"]
+links: []
+---
+
+First [link1](target1 "rel1") and second [link2](target2).
+Then a third one [link3](target3 "rel3").
+'''
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
+        
+        assert not errors
+        assert front_matter is not None
+        assert len(auto_links) == 3
+        
+        assert auto_links[0]['id'] == 'auto-link-1'
+        assert auto_links[0]['text'] == 'link1'
+        assert auto_links[0]['target'] == 'target1'
+        assert auto_links[0]['rel'] == 'rel1'
+        assert auto_links[0]['source'] == 'inline'
+        
+        assert auto_links[1]['id'] == 'auto-link-2'
+        assert auto_links[1]['text'] == 'link2'
+        assert auto_links[1]['target'] == 'target2'
+        assert auto_links[1]['rel'] is None
+        assert auto_links[1]['source'] == 'inline'
+        
+        assert auto_links[2]['id'] == 'auto-link-3'
+        assert auto_links[2]['text'] == 'link3'
+        assert auto_links[2]['target'] == 'target3'
+        assert auto_links[2]['rel'] == 'rel3'
+        assert auto_links[2]['source'] == 'inline'
+
+    def test_parse_inline_links_with_special_chars_in_text_target(self):
+        """Test inline links with special characters in text and target."""
+        # Note: "rel" typically doesn't have many special chars.
+        # Targets can be complex URLs.
+        content = '''<!-- ormd:0.1 -->
+---
+title: "Special Chars Links"
+authors: ["Test"]
+links: []
+---
+
+A link [with *markdown* `chars`!](https://example.com/path?q=v&s=t#fragment "relates").
+Another [link with spaces](target with spaces).
+'''
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
+        assert not errors
+        assert len(auto_links) == 2
+
+        assert auto_links[0]['id'] == 'auto-link-1'
+        assert auto_links[0]['text'] == 'with *markdown* `chars`!'
+        assert auto_links[0]['target'] == 'https://example.com/path?q=v&s=t#fragment'
+        assert auto_links[0]['rel'] == 'relates'
+        
+        assert auto_links[1]['id'] == 'auto-link-2'
+        assert auto_links[1]['text'] == 'link with spaces'
+        assert auto_links[1]['target'] == 'target with spaces' # Markdown allows spaces in target if not encoded
+        assert auto_links[1]['rel'] is None
+
+
+    def test_parse_no_inline_links_in_body(self):
+        """Test parsing a document with no inline semantic links in the body."""
+        content = '''<!-- ormd:0.1 -->
+---
+title: "No Inline Links"
+authors: ["Test"]
+links: []
+---
+
+This body has no inline semantic links. Only [[legacy-style]] ones.
+'''
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
+        assert not errors
+        assert len(auto_links) == 0
+
+    def test_parse_empty_document_for_inline_links(self):
+        """Test parsing an empty document (except version tag) for inline links."""
+        content = '''<!-- ormd:0.1 -->
+'''
+        # Parsing allows a version-only document; validation enforces required front-matter.
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
+        assert not errors
+        assert front_matter == {}
+        assert body == "" 
+        assert len(auto_links) == 0
+
+
+    def test_parse_document_with_only_front_matter_no_body_for_inline_links(self):
+        """Test parsing a document with front-matter but an empty or non-existent body."""
+        content = '''<!-- ormd:0.1 -->
+---
+title: "FM Only"
+authors: ["Test"]
+links: []
+---
+'''
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
+        assert not errors
+        assert front_matter is not None
+        assert body.strip() == "" # Body is empty
+        assert len(auto_links) == 0
+        
+        content_no_body_section = '''<!-- ormd:0.1 -->
+---
+title: "FM Only No Body Section"
+authors: ["Test"]
+links: []
+---''' # No newline after closing ---
+        front_matter, body, metadata, auto_links, errors = parse_document(content_no_body_section)
+        assert not errors
+        assert front_matter is not None
+        assert body.strip() == "" # Body is effectively empty
+        assert len(auto_links) == 0
+
+    def test_inline_links_at_start_and_end_of_body(self):
+        """Test inline links appearing at the very start or end of the body."""
+        content = '''<!-- ormd:0.1 -->
+---
+title: "Edge Case Links"
+authors: ["Test"]
+links: []
+---
+[start link](start)This is body text[end link](end "last").
+'''
+        front_matter, body, metadata, auto_links, errors = parse_document(content)
+        assert not errors
+        assert len(auto_links) == 2
+        assert auto_links[0]['id'] == 'auto-link-1'
+        assert auto_links[0]['text'] == 'start link'
+        assert auto_links[0]['target'] == 'start'
+        assert auto_links[0]['rel'] is None
+
+        assert auto_links[1]['id'] == 'auto-link-2'
+        assert auto_links[1]['text'] == 'end link'
+        assert auto_links[1]['target'] == 'end'
+        assert auto_links[1]['rel'] == 'last'

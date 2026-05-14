@@ -63,28 +63,63 @@ Body text…
 
 ## 4. Relational Layer
 
-### 4.1 Front-Matter Field `links:`
+ORMD's relational layer allows authors to define and reference semantic connections within the document or to external resources.
 
-* Must be a YAML **list of objects** each with keys:
+### 4.1 Inline Semantic Links (Primary Creation Method)
 
-  * `id` — unique identifier (string)
-  * `rel` — relation type (string, e.g. `supports`, `refutes`)
-  * `to` — target URI or internal anchor
+Links are primarily created directly in the document body using a Markdown-like syntax:
 
+`[display text](target "optional relationship")`
+
+*   **`display text`**: The text that will be rendered for the link.
+*   **`target`**: The URL, internal anchor (e.g., `#section-id`), or path to another file. Internal anchors should correspond to HTML-compatible anchor IDs generated from Markdown headings (e.g., `# My Heading` becomes `#my-heading`) or explicit HTML anchors (e.g., `<a id="custom-anchor"></a>`).
+*   **`optional relationship`**: A keyword describing the semantic nature of the link, enclosed in double quotes. If omitted, the link has no explicit semantic relationship. Approved relationship types are defined by the ORMD schema (e.g., `supports`, `refutes`, `cites`, `references`, `related`).
+
+**Example:**
+`This concept [supports our main argument](#argument-1 "supports"). Read more at [Example.com](https://example.com "references").`
+
+### 4.2 Front-Matter `links:` Section (Link Definitions)
+
+All links, whether created inline or defined manually, are registered in the document's front-matter within the `links:` list. Tools like `ormd update` can scan the document body for inline semantic links and auto-populate this section.
+
+Each entry in the `links:` list is an object with the following fields:
+
+*   `id` (string, required): A unique identifier for the link within the document. For auto-populated links, this is typically generated (e.g., `auto-link-1`).
+*   `to` (string, required): The target URI or internal anchor (derived from the `target` in inline syntax).
+*   `rel` (string, optional): The relationship type (from the `"relationship"` part of inline syntax or manually defined). If present, it must be one of the approved relationship types.
+*   `text` (string, optional): For links auto-generated from inline syntax, this field stores the original `display text`.
+*   `title` (string, optional): For manually defined links, this field can suggest a display text when the link is referenced using the `[[link-id]]` syntax.
+*   `source` (string, optional): Indicates how the link definition was created (e.g., `inline` for auto-generated links, `manual` if specified).
+
+**Example `links:` section in YAML front-matter:**
 ```yaml
 links:
-  - id: g1
-    rel: supports
-    to: "#goal"
+  - id: "manual-ref"
+    to: "#section-details"
+    rel: "references"
+    title: "Detailed Section Reference" # Manual link with a title
+  - id: "auto-link-1" # Auto-populated from an inline link
+    to: "https://example.org/resource"
+    rel: "cites"
+    text: "External Resource" # Original display text from [External Resource](...)
+    source: "inline"
 ```
 
-### 4.2 Inline Shortcut `[[link-id]]`
+### 4.3 Referencing Defined Links: `[[link-id]]`
 
-* Anywhere in the body, `[[g1]]` expands to a hyperlink to the target defined in front-matter.
+Once a link is defined in the front-matter's `links:` section (either manually or via auto-population), it can be referenced elsewhere in the document body using the `[[link-id]]` syntax.
 
-```ormd
-See [[g1]] for the goal section.
-```
+**Example:**
+`As shown in our methods [[manual-ref]], the data was processed.`
+
+When rendered, `[[link-id]]` is typically replaced by an HTML hyperlink. The display text for this link may be derived from the link definition's `text` field (if populated from an inline link), then its `title` field (if manually provided), or fall back to the `link-id` itself.
+
+### 4.4 Legacy Link Handling
+
+For backward compatibility or specific workflows, tools may offer a `--legacy-links` mode. When active:
+*   `ormd update` may not auto-populate inline `[text](target "rel")` links into the front-matter.
+*   `ormd validate` may apply stricter rules for `[[link-id]]` references, expecting them to be resolved only from manually defined front-matter `links:`, and may not fully process inline links for definition purposes.
+This flag is intended as a transitional aid. The primary mechanism for link creation and definition is the inline syntax with front-matter auto-population.
 
 ## 5. Packaging
 
@@ -172,9 +207,16 @@ Open. Relational. Markdown.
 
 ## 10. CLI Commands (v0.1)
 
-* `ormd-cli validate [file.ormd|package.ormd]`
-* `ormd-cli pack content.ormd meta.json [--out=package.ormd]`
-* `ormd-cli unpack package.ormd --out-dir=./`
+* `ormd validate [file.ormd|package.ormd] [--legacy-links] [--check-external-links]`
+* `ormd update [file.ormd] [--legacy-links] [--dry-run] [--force-update]`
+* `ormd pack content.ormd meta.json [--out=package.ormd]`
+* `ormd unpack package.ormd --out-dir=./`
+* `ormd render [file.ormd|package.ormd] [-o output.html]`
+* `ormd create [file.ormd]`
+* `ormd open [file.ormd|package.ormd]`
+* `ormd edit [file.ormd|package.ormd]`
+* `ormd convert [input_file] [output.ormd]`
+
 
 ## 11. Next Steps (for v0.2)
 

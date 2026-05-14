@@ -44,6 +44,200 @@ Content here.
         finally:
             os.unlink(temp_path)
 
+    def _create_test_file_content(self, fm_dict: dict, body_md: str) -> str:
+        """Helper to create ORMD file content string for validator tests."""
+        # Assuming serialize_front_matter is available or front_matter is pre-serialized
+        # For simplicity, let's assume fm_dict is directly convertible to YAML string lines
+        # This helper is simplified for direct string construction in tests
+        fm_lines = ["---"]
+        if fm_dict:
+            for key, value in fm_dict.items():
+                if isinstance(value, list) and key == "links": # Special handling for links list
+                    fm_lines.append(f"{key}:")
+                    for item in value:
+                        # Ensure string values within link items are quoted
+                        item_parts = []
+                        for k,v_item in item.items():
+                            if isinstance(v_item, str):
+                                item_parts.append(f"{k}: \"{v_item}\"")
+                            else: # numbers, booleans, nulls (None)
+                                item_parts.append(f"{k}: {str(v_item).lower() if isinstance(v_item, bool) else v_item}")
+                        fm_lines.append(f"  - {{{', '.join(item_parts)}}}")
+                elif isinstance(value, list):
+                    authors_list = [f"\"{a}\"" if isinstance(a, str) else str(a) for a in value] # Quote string authors
+                    fm_lines.append(f"{key}: [{', '.join(authors_list)}]")
+                elif isinstance(value, str):
+                    fm_lines.append(f"{key}: \"{value}\"")
+                else:
+                    fm_lines.append(f"{key}: {value}")
+        fm_lines.append("---")
+        fm_string = "\n".join(fm_lines)
+        return f"<!-- ormd:0.1 -->\n{fm_string}\n\n{body_md}"
+
+    # --- Tests for Target Validation ---
+    def test_valid_internal_anchor_slugified_heading(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [{"id": "l1", "to": "#my-heading", "rel": "cites"}]},
+            "# My Heading\nSome text."
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert validator.validate_file(str(file_path))
+        assert not validator.errors
+
+    def test_invalid_internal_anchor_not_found(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [{"id": "l1", "to": "#non-existent", "rel": "cites"}]},
+            "# My Heading\nSome text."
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert validator.validate_file(str(file_path))
+        assert any("points to an internal target '#non-existent' that was not found" in warning for warning in validator.warnings)
+
+    def test_valid_internal_anchor_custom_id_heading(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [{"id": "l1", "to": "#custom", "rel": "cites"}]},
+            "# My Heading {#custom}\nSome text."
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert validator.validate_file(str(file_path))
+        assert not validator.errors
+
+    def test_valid_internal_anchor_html_id(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [{"id": "l1", "to": "#html-id", "rel": "cites"}]},
+            '<div id="html-id">Content</div>'
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert validator.validate_file(str(file_path))
+        assert not validator.errors
+        
+    def test_valid_external_url(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [{"id": "l1", "to": "https://example.com/page?q=1", "rel": "references"}]},
+            "Body text."
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert validator.validate_file(str(file_path))
+        assert not validator.errors
+
+    def test_invalid_external_url_malformed(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [{"id": "l1", "to": "htp:/badurl", "rel": "references"}]},
+            "Body text."
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert not validator.validate_file(str(file_path))
+        assert any("has a malformed external URL: 'htp:/badurl'" in err for err in validator.errors)
+
+    # --- Test for Relationship Validation ---
+    def test_link_rel_validation_valid_and_invalid(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [
+                {"id": "l1", "to": "#h1", "rel": "supports"}, # Valid
+                {"id": "l2", "to": "#h1", "rel": "invalid_rel_type"}  # Invalid
+            ]},
+            "# H1"
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert not validator.validate_file(str(file_path))
+        assert any("uses an unapproved relationship type: 'invalid_rel_type'" in err for err in validator.errors)
+        assert not any("uses an unapproved relationship type: 'supports'" in err for err in validator.errors)
+
+    # --- Tests for [[link-id]] Validation ---
+    def test_defined_link_id_reference_manual_and_auto(self, tmp_path):
+        """ Test [[id]] references to manual and (merged) auto-links. """
+        validator = ORMDValidator()
+        # Simulate that 'auto-link-1' was an inline link merged into front-matter by updater
+        # Validator works on the front-matter's 'links' + auto_links from current parse for merged_links
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [
+                {"id": "manual1", "to": "#h1", "rel": "cites", "source": "manual"},
+            ]},
+            "# H1\n[[manual1]]\n[auto link display text](https://example.com 'references')\n[[auto-link-1]]"
+        )
+        # For this test, validator runs on this content.
+        # parse_document will produce auto_links = [{"id": "auto-link-1", ...}]
+        # merged_links_for_validation will contain both manual1 and auto-link-1.
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert validator.validate_file(str(file_path), legacy_links_mode=False)
+        print(validator.errors) # For debugging if it fails
+        assert not validator.errors # Both [[manual1]] and [[auto-link-1]] should be resolved
+
+    def test_undefined_link_id_reference(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": []},
+            "[[undefined]]"
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert not validator.validate_file(str(file_path), legacy_links_mode=False)
+        assert any("Body reference [[undefined]] does not correspond to any defined link" in err for err in validator.errors)
+
+    def test_unused_link_definition_warning(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [
+                {"id": "unused1", "to": "#h", "rel": "cites", "source": "manual"}
+            ]},
+            "# H\nBody text without reference to unused1.\n[another link](target 'rel')"
+            # auto-link-1 will also be defined but unused by [[...]]
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        assert validator.validate_file(str(file_path)) # Should be valid
+        assert any("Link definition 'unused1' (source: manual) is not used" in w for w in validator.warnings)
+        assert any("Link definition 'auto-link-1' (source: inline) is not used" in w for w in validator.warnings)
+
+    # --- Tests for --legacy-links Mode ---
+    def test_legacy_links_mode_undefined_link_id(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": []}, # No manual links
+            "[[ref-in-body]]\n[this is an inline link](target)." 
+            # In legacy mode, [[ref-in-body]] is undefined because 'this is an inline link' is not considered for resolving it.
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        # Validation should fail because [[ref-in-body]] is not defined in front-matter.
+        # The inline link [this is an inline link](target) is ignored for [[...]] resolution in legacy.
+        assert not validator.validate_file(str(file_path), legacy_links_mode=True)
+        assert any("Body reference [[ref-in-body]] does not correspond to any defined link in front-matter (legacy mode)" in err for err in validator.errors)
+
+    def test_legacy_links_mode_target_validation_on_manual_links(self, tmp_path):
+        validator = ORMDValidator()
+        content = self._create_test_file_content(
+            {"title": "Test", "authors": ["Auth"], "links": [
+                {"id": "m1", "to": "#non-existent-manual", "rel": "cites"}
+            ]},
+            "[[m1]]\n[inline link](target)."
+        )
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content)
+        # Should fail because manual link m1 points to non-existent target.
+        # In legacy_links_mode=True, the logic in validate_file for merging links
+        # only adds manual links to merged_links_for_validation.
+        # So, the inline link 'auto-link-1' is not in merged_links_for_validation and thus not validated.
+        assert not validator.validate_file(str(file_path), legacy_links_mode=True)
+        assert any("Link 'm1' (source: manual) points to an internal target '#non-existent-manual' that was not found" in err for err in validator.errors)
+        # Ensure no errors about the inline link's target, as it shouldn't be in merged_links for validation in legacy.
+        assert not any("auto-link-1" in err for err in validator.errors)
+
     def test_missing_required_fields_guidance(self):
         """Test clear guidance for missing required fields."""
         content = '''<!-- ormd:0.1 -->

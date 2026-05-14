@@ -397,7 +397,7 @@ Content that should preserve existing fields.
             # Check that existing fields are preserved by reading the updated file
             from ormd_cli.parser import parse_document
             updated_content = Path(temp_path).read_text()
-            updated_fm, _, _, _ = parse_document(updated_content)
+            updated_fm, _, _, _, _ = parse_document(updated_content)
             
             assert updated_fm['version'] == "1.0"
             assert updated_fm['status'] == "published"
@@ -434,7 +434,7 @@ It should fail gracefully.
             # Check that front-matter was created
             from ormd_cli.parser import parse_document
             updated_content = Path(temp_path).read_text()
-            updated_fm, _, _, _ = parse_document(updated_content)
+            updated_fm, _, _, _, _ = parse_document(updated_content)
             
             assert updated_fm is not None
             assert 'title' in updated_fm

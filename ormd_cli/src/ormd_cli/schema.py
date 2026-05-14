@@ -6,7 +6,7 @@ the front-matter YAML block instead of using custom +++meta syntax.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Set
 from datetime import datetime
 import re
 from enum import Enum
@@ -42,6 +42,9 @@ class Link:
     id: str
     rel: str
     to: str
+    text: Optional[str] = None  # For display text from [text](target)
+    title: Optional[str] = None # For display text suggestion for [[id]] from manual links
+    source: Optional[str] = None # E.g., 'inline', 'manual'
 
 
 @dataclass
@@ -216,12 +219,22 @@ class FrontMatterValidator:
             
             # Required link fields
             required_link_fields = ['id', 'rel', 'to']
-            for field in required_link_fields:
-                if field not in link:
-                    self.errors.append(f"Link {i} missing required field '{field}'")
-                elif not isinstance(link[field], str) or not link[field].strip():
-                    self.errors.append(f"Link {i} field '{field}' must be a non-empty string")
-    
+            for field_name in required_link_fields:
+                if field_name not in link:
+                    self.errors.append(f"Link {i} missing required field '{field_name}'")
+                elif not isinstance(link[field_name], str) or not link[field_name].strip():
+                    self.errors.append(f"Link {i} field '{field_name}' must be a non-empty string")
+            
+            # Optional link fields type validation
+            optional_string_fields = ['text', 'title', 'source']
+            for field_name in optional_string_fields:
+                if field_name in link and link[field_name] is not None: # Check for None explicitly
+                    if not isinstance(link[field_name], str):
+                        self.errors.append(f"Link {i} field '{field_name}' must be a string if present")
+                    # Allow empty string for these optional fields, unlike required fields.
+                    # elif not link[field_name].strip():
+                    #    self.errors.append(f"Link {i} field '{field_name}' should not be an empty string if present, or omit the field.")
+
     def _validate_optional_fields(self, front_matter: Dict[str, Any]) -> None:
         """Validate optional fields"""
         # Validate dates structure
@@ -381,6 +394,8 @@ class FrontMatterValidator:
         except ValueError:
             self.errors.append(f"Field '{field_name}' contains an invalid date value")
 
+# Define approved link relationships at the module level
+APPROVED_LINK_RELATIONSHIPS: Set[str] = {"supports", "refutes", "cites", "references", "related", "extends", "rel"}
 
 def validate_front_matter_schema(front_matter: Dict[str, Any]) -> tuple[bool, List[str]]:
     """

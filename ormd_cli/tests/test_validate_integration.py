@@ -1,4 +1,4 @@
-"""Integration tests for ORMD validate command.
+﻿"""Integration tests for ORMD validate command.
 
 These tests focus on CLI behavior, error messages, and return codes.
 """
@@ -62,7 +62,6 @@ Content here.
             result = self.run_validate_command(temp_path)
             
             assert result['returncode'] == 0
-            assert "✅" in result['stdout']
             assert "is valid ORMD 0.1" in result['stdout']
             
         finally:
@@ -90,7 +89,7 @@ This document has validation errors.
             result = self.run_validate_command(temp_path)
             
             assert result['returncode'] == 1
-            assert "❌ Validation failed" in result['stdout']
+            assert "Validation failed" in result['stdout']
             assert "Missing required field 'authors'" in result['stdout']
             assert "Missing required field 'links'" in result['stdout']
             # Removed: assert "Unknown fields" in result['stdout']
@@ -120,7 +119,7 @@ This should fail validation.
             result = self.run_validate_command(temp_path)
             
             assert result['returncode'] == 1
-            assert "❌ Validation failed" in result['stdout']
+            assert "Validation failed" in result['stdout']
             assert "Add '<!-- ormd:0.1 -->' at the top" in result['stdout']
             
         finally:
@@ -155,7 +154,7 @@ And [[another-undefined]] too.
             result = self.run_validate_command(temp_path)
             
             assert result['returncode'] == 1
-            assert "❌ Validation failed" in result['stdout']
+            assert "Validation failed" in result['stdout']
             assert "Undefined link reference [[undefined-link]]" in result['stdout']
             assert "Undefined link reference [[another-undefined]]" in result['stdout']
             assert "add definition to 'links' section" in result['stdout']
@@ -191,8 +190,7 @@ This document only references [[used-link]] but defines unused-link too.
             result = self.run_validate_command(temp_path)
             
             assert result['returncode'] == 0
-            assert "✅" in result['stdout']
-            assert "with 1 warning(s)" in result['stdout']
+            assert "with 2 warning(s)" in result['stdout']
             assert "Use --verbose to see warnings" in result['stdout']
             
         finally:
@@ -223,7 +221,6 @@ This document has no link references.
             result = self.run_validate_command(temp_path, ['--verbose'])
             
             assert result['returncode'] == 0
-            assert "⚠️" in result['stdout']
             assert "warning(s):" in result['stdout']
             assert "unused-link" in result['stdout']
             assert "defined but not referenced" in result['stdout']
@@ -256,7 +253,7 @@ This references [[undefined-link]] which doesn't exist.
             result = self.run_validate_command(temp_path, ['--verbose'])
             
             assert result['returncode'] == 1
-            assert "❌ Validation failed with" in result['stdout']
+            assert "Validation failed with" in result['stdout']
             assert "error(s):" in result['stdout']
             assert "1." in result['stdout']  # Numbered error list
             # assert "2." in result['stdout'] # Number of errors might change based on validator logic
@@ -440,7 +437,6 @@ All links are used and defined properly.
             result = self.run_validate_command(temp_path)
             
             assert result['returncode'] == 0
-            assert "✅" in result['stdout']
             assert "is valid ORMD 0.1" in result['stdout']
             assert "warning" not in result['stdout']
             

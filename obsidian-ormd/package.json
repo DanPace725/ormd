@@ -1,0 +1,25 @@
+{
+  "name": "obsidian-ormd",
+  "version": "0.1.0",
+  "description": "Minimal Obsidian plugin for Open Relational Markdown files.",
+  "main": "main.js",
+  "scripts": {
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "test": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "ormd",
+    "markdown"
+  ],
+  "author": "Open Relational Markdown",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "^1.8.7",
+    "typescript": "^5.8.0"
+  }
+}

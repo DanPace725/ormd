@@ -38,6 +38,90 @@ ormd --help
 
 ---
 
+## 🔗 Linking in ORMD Documents
+
+ORMD supports powerful semantic linking to establish relationships between different parts of a document, or to external resources. There are two primary ways to create and manage links:
+
+### 1. Inline Semantic Links (Recommended)
+
+You can create links directly within the body of your ORMD document using a syntax similar to Markdown links, but with an added optional relationship type:
+
+`[display text](target "optional relationship")`
+
+*   **`display text`**: The text that will be rendered for the link.
+*   **`target`**: The URL, internal anchor (e.g., `#section-id`), or path to another file.
+*   **`optional relationship`**: A keyword describing the semantic nature of the link. If provided, it must be enclosed in double quotes.
+
+**Examples:**
+
+*   Internal anchor: `[Go to Introduction](#introduction)`
+*   External website: `[Visit ORMD Spec](https://github.com/open-relational-markdown/spec "references")`
+*   Link to another document: `[See data analysis](data.ormd "supports")`
+*   Link without a relationship: `[External Link](https://example.org)`
+
+**Approved Link Relationships:**
+
+The standard set of approved link relationships includes: `supports`, `refutes`, `cites`, `references`, `related`. This list is defined in the ORMD schema and may be expanded.
+
+**Auto-population by `ormd update`:**
+
+When you run `ormd update`, the tool scans your document body for these inline semantic links. For each link found, it will:
+1.  Generate a unique ID (e.g., `auto-link-1`, `auto-link-2`, ...).
+2.  Extract the display text, target, and relationship.
+3.  Add (or merge) this information as a link object into the `links:` list in your document's front-matter.
+    *   The `display text` is stored in the `text` field of the link object.
+    *   The `source` field is set to `inline`.
+    *   If a manual link with the same target and relationship already exists, the inline link is considered a duplicate and not added.
+    *   If a manual link exists with the same target but a *different* relationship, a warning is issued, and the auto-generated link is still added (manual definitions are prioritized if they are complete).
+
+This process allows you to write naturally and have the structured link data managed automatically in the front-matter.
+
+### 2. Manual Link Definitions in Front-Matter
+
+You can also declare links directly in the document's front-matter YAML block within the `links:` list. Each link is an object with the following fields:
+
+*   `id` (string, required): A unique identifier for the link within the document.
+*   `to` (string, required): The target URL, internal anchor, or file path.
+*   `rel` (string, required): The relationship type (must be one of the approved relationships).
+*   `title` (string, optional): Suggested display text when this link is referenced using `[[link-id]]` syntax, especially if the link is purely manual and has no body text counterpart.
+*   `text` (string, optional): Stores the original display text if this link object was auto-generated from an inline `[text](target "rel")` link.
+*   `source` (string, optional): Indicates the origin of the link (e.g., `inline` for auto-generated, `manual` if explicitly set).
+
+**Example Front-Matter:**
+```yaml
+---
+title: "My Document"
+authors: ["Author"]
+links:
+  - id: "sec1-ref"
+    to: "#section-1"
+    rel: "references"
+    title: "Reference to Section 1"
+  - id: "ext-tool"
+    to: "https://example.com/tool"
+    rel: "related"
+  # Example of an auto-populated link that might appear here after 'ormd update'
+  # Note: 'target' from parser becomes 'to' in the link object by the updater.
+  - id: "auto-link-1" 
+    text: "Example Website"
+    to: "https://example.com"    
+    rel: "references"
+    source: "inline" 
+---
+```
+
+### 3. Referencing Links in the Body (`[[link-id]]`)
+
+Once a link is defined (either manually or auto-populated by `ormd update` into the front-matter), you can reference it anywhere in your document body using the `[[link-id]]` syntax.
+
+**Example:**
+
+`Our method [[sec1-ref]] is based on prior work.`
+
+When rendered, `[[sec1-ref]]` would typically display using the `title` of the link definition (if provided), or the `text` (if it was an auto-generated link), or fall back to the `id` itself. This provides a way to create semantic, easily updatable cross-references.
+
+---
+
 ## 📚 CLI Commands
 
 All commands support `--help` for detailed options directly from the command line.
@@ -110,6 +194,8 @@ Validates an ORMD file against the 0.1 specification with comprehensive Phase 1 
 
 **Options:**
 *   `--verbose, -v`: Show detailed validation info.
+*   `--legacy-links`: Enable legacy link handling. This mode skips processing of inline `[text](target)` links for validation purposes and uses stricter rules for `[[link-id]]` references (expecting them only in front-matter).
+*   `--check-external-links`: Enable checking of external link targets (requires network access and may be slow).
 *   `--help`: Show help message and exit.
 
 **Example:**
@@ -130,6 +216,7 @@ Updates and syncs front-matter fields (date_modified, word_count, link_ids, asse
 *   `--dry-run, -n`: Show what would be updated without making changes.
 *   `--force-update, -f`: Update locked fields (ignore `locked: true`).
 *   `--verbose, -v`: Show detailed update information.
+*   `--legacy-links`: Enable legacy link handling. This mode prevents `ormd update` from scanning for inline `[text](target)` links and auto-populating them into the front-matter `links` section.
 *   `--help`: Show help message and exit.
 
 **Example:**

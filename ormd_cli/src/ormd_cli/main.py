@@ -23,6 +23,7 @@ import json # Used by render, open, edit
 from .server import _serve_and_open
 from .html_generator import _generate_viewable_html, _generate_editable_html, generate_render_html
 from .logger import setup_logging, logger # Added
+from .converter import _parse_pdf_date_string
 # get_edit_template, _generate_viewable_html, _generate_editable_html, markdown and re imports removed as logic moved.
 
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))
@@ -99,7 +100,9 @@ def create(ctx, file_path: str): # Added ctx
 # verbose option is now global, remove from here if not specifically overriding global
 # For now, keeping it to see if click handles local vs global context options gracefully
 @click.option('--verbose', '-v', is_flag=True, help='Show detailed validation info (overrides global -v).')
-def validate(ctx, file_path, verbose): # Added ctx, verbose might be from global ctx.obj['VERBOSE']
+@click.option('--legacy-links', is_flag=True, help='Enable legacy link handling (skip inline link processing and strict validation).')
+@click.option('--check-external-links', is_flag=True, help='Enable checking of external link targets (requires network access).')
+def validate(ctx, file_path, verbose, legacy_links, check_external_links): # Added ctx, verbose might be from global ctx.obj['VERBOSE']
     """Validate an ORMD file against the 0.1 specification.
 
     The -v/--verbose flag (global or command-specific) shows detailed validation info.
@@ -110,10 +113,14 @@ def validate(ctx, file_path, verbose): # Added ctx, verbose might be from global
       ormd validate my_document.ormd
       ormd -v validate my_document.ormd
     """
-    logger.debug(f"Validating file: {file_path}")
+    logger.debug(f"Validating file: {file_path} with legacy_links={legacy_links}, check_external_links={check_external_links}")
     validator = ORMDValidator()
     
-    is_valid = validator.validate_file(file_path)
+    is_valid = validator.validate_file(
+        file_path, 
+        legacy_links_mode=legacy_links, 
+        check_external_links=check_external_links
+    )
     
     # Determine if local verbose was explicitly set, otherwise use global
     # This assumes the local verbose flag is meant to override the global for this command.
@@ -239,7 +246,8 @@ def unpack(ctx, package_file, out_dir, overwrite): # Added ctx
 @click.option('--dry-run', '-n', is_flag=True, help='Show what would be updated without making changes')
 @click.option('--force-update', '-f', is_flag=True, help='Update locked fields (ignore locked: true)')
 @click.option('--verbose', '-v', is_flag=True, help='Show detailed update information (overrides global -v).')
-def update(ctx, file_path, dry_run, force_update, verbose): # Added ctx, verbose might be from global
+@click.option('--legacy-links', is_flag=True, help='Enable legacy link handling (skip auto-generation of links in front-matter).')
+def update(ctx, file_path, dry_run, force_update, verbose, legacy_links): # Added ctx, verbose might be from global
     # If local verbose is removed, use: verbose = ctx.obj.get('VERBOSE', False)
     """Update and sync front-matter fields (date_modified, word_count, etc.).
 
@@ -265,7 +273,8 @@ def update(ctx, file_path, dry_run, force_update, verbose): # Added ctx, verbose
             file_path,
             dry_run=dry_run,
             force_update=force_update,
-            verbose=verbose_flag # Pass the determined verbosity
+            verbose=verbose_flag, # Pass the determined verbosity
+            legacy_links_mode=legacy_links
         )
 
         if dry_run:
@@ -318,7 +327,8 @@ def render(ctx, input_file, out, overwrite: bool): # Added overwrite
     links = []
     front_matter = {}
     body = ''
-    metadata = None
+    metadata = None # This is the old +++meta block, should be None.
+    auto_links = [] # Initialize auto_links
 
     if is_zip:
         logger.debug(f"Input is a zip package. Reading content.ormd and meta.json.")
@@ -326,22 +336,35 @@ def render(ctx, input_file, out, overwrite: bool): # Added overwrite
             if 'content.ormd' in zf.namelist():
                 raw_ormd = zf.read('content.ormd').decode('utf-8')
             if 'meta.json' in zf.namelist():
-                meta = json.loads(zf.read('meta.json').decode('utf-8'))
+                meta = json.loads(zf.read('meta.json').decode('utf-8')) # meta here is from meta.json
     else:
         logger.debug(f"Input is a plain ORMD file. Reading directly.")
         raw_ormd = Path(input_file).read_text(encoding='utf-8')
 
     # Unified parsing for both file and package using the shared parser
-    front_matter, body, metadata, parse_errors = parse_document(raw_ormd)
-    logger.debug("Document parsed. Generating HTML content.")
-    title = front_matter.get('title', title) if front_matter else title
-    links = front_matter.get('links', []) if front_matter else []
+    # parse_document now returns: front_matter, body, metadata (old style, should be None), auto_links, parse_errors
+    front_matter, body, metadata, auto_links, parse_errors = parse_document(raw_ormd)
+    
+    if parse_errors: # Log errors from parser
+        logger.warning(f"{SYMBOLS['warning']} Document has parsing errors:")
+        for error in parse_errors:
+            logger.warning(f"  {SYMBOLS['bullet']} {error}")
 
-    # The main HTML generation logic is now in html_generator.py
-    # However, the render command itself still handles initial parsing and file I/O.
-    # The 'body' passed to generate_render_html is the raw body from parse_document.
-    # Link replacement and markdown conversion are now inside generate_render_html.
-    html_content = generate_render_html(raw_ormd, front_matter, body, links, meta)
+    logger.debug(f"Document parsed. Auto-links found: {len(auto_links)}. Generating HTML content.")
+    title = front_matter.get('title', title) if front_matter else title
+    # 'links' for generate_render_html should be front_matter.get('links', [])
+    fm_links = front_matter.get('links', []) if front_matter else []
+
+
+    # The 'meta' passed to generate_render_html is from the meta.json in package, not the metadata from parse_document
+    html_content = generate_render_html(
+        raw_ormd, 
+        front_matter, 
+        body, 
+        fm_links,  # This is front_matter.get('links', [])
+        meta,      # This is from meta.json (for packages)
+        auto_links_from_parser=auto_links
+    )
 
     # Determine output path
     output_path_str = out
@@ -382,7 +405,8 @@ def open(ctx, file_path, port, no_browser, show_url): # Added ctx
         input_path = Path(file_path)
         is_zip = input_path.suffix == '.ormd' and zipfile.is_zipfile(file_path)
         raw_ormd = ''
-        meta = {}
+        meta = {} # From meta.json for packages
+        auto_links = []
         
         if is_zip:
             with zipfile.ZipFile(file_path, 'r') as zf:
@@ -394,8 +418,8 @@ def open(ctx, file_path, port, no_browser, show_url): # Added ctx
             raw_ormd = Path(file_path).read_text(encoding='utf-8')
 
         # Parse document
-        front_matter, body, metadata, parse_errors = parse_document(raw_ormd)
-        logger.debug("Document parsed for viewing mode.")
+        front_matter, body, metadata, auto_links, parse_errors = parse_document(raw_ormd)
+        logger.debug(f"Document parsed for viewing mode. Auto-links found: {len(auto_links)}.")
         
         if parse_errors:
             logger.warning(f"{SYMBOLS['warning']} Document has parsing errors:")
@@ -403,11 +427,20 @@ def open(ctx, file_path, port, no_browser, show_url): # Added ctx
                 logger.warning(f"  {SYMBOLS['bullet']} {error}")
         
         title = front_matter.get('title', 'ORMD Document') if front_matter else 'ORMD Document'
-        links = front_matter.get('links', []) if front_matter else []
-        permissions = front_matter.get('permissions', {}) if front_matter else {}
+        # 'links' for HTML generation should be front_matter.get('links', [])
+        fm_links = front_matter.get('links', []) if front_matter else []
+        permissions = front_matter.get('permissions', {}) if front_matter else {} # Not used by _generate_viewable_html directly but kept for context
         
         # Generate HTML for viewing
-        html_content = _generate_viewable_html(file_path, raw_ormd, front_matter, body, links, meta)
+        html_content = _generate_viewable_html(
+            file_path, 
+            raw_ormd, 
+            front_matter, 
+            body, 
+            fm_links, # This is front_matter.get('links', []) 
+            meta,     # This is from meta.json (for packages)
+            auto_links_from_parser=auto_links
+        )
         
         if show_url:
             # Just show what would happen without starting server
@@ -451,7 +484,8 @@ def edit(ctx, file_path, port, no_browser, force, show_url): # Added ctx
         input_path = Path(file_path)
         is_zip = input_path.suffix == '.ormd' and zipfile.is_zipfile(file_path)
         raw_ormd = ''
-        meta = {}
+        meta = {} # From meta.json for packages
+        auto_links = []
         
         if is_zip:
             with zipfile.ZipFile(file_path, 'r') as zf:
@@ -463,8 +497,8 @@ def edit(ctx, file_path, port, no_browser, force, show_url): # Added ctx
             raw_ormd = Path(file_path).read_text(encoding='utf-8')
 
         # Parse document
-        front_matter, body, metadata, parse_errors = parse_document(raw_ormd)
-        logger.debug("Document parsed for editing mode.")
+        front_matter, body, metadata, auto_links, parse_errors = parse_document(raw_ormd)
+        logger.debug(f"Document parsed for editing mode. Auto-links found: {len(auto_links)}.")
         
         if parse_errors:
             logger.warning(f"{SYMBOLS['warning']} Document has parsing errors:")
@@ -472,7 +506,8 @@ def edit(ctx, file_path, port, no_browser, force, show_url): # Added ctx
                 logger.warning(f"  {SYMBOLS['bullet']} {error}")
         
         title = front_matter.get('title', 'ORMD Document') if front_matter else 'ORMD Document'
-        links = front_matter.get('links', []) if front_matter else []
+        # 'links' for HTML generation should be front_matter.get('links', [])
+        fm_links = front_matter.get('links', []) if front_matter else []
         permissions = front_matter.get('permissions', {}) if front_matter else {}
         
         # Check permissions before proceeding
@@ -504,7 +539,15 @@ def edit(ctx, file_path, port, no_browser, force, show_url): # Added ctx
                 logger.warning(f"{SYMBOLS['warning']} Editing document marked as non-editable")
         
         # Generate HTML for editing
-        html_content = _generate_editable_html(file_path, raw_ormd, front_matter, body, links, meta)
+        html_content = _generate_editable_html(
+            file_path, 
+            raw_ormd, 
+            front_matter, 
+            body, 
+            fm_links, # This is front_matter.get('links', [])
+            meta,     # This is from meta.json (for packages)
+            auto_links_from_parser=auto_links
+        )
         
         if show_url:
             # Just show what would happen without starting server

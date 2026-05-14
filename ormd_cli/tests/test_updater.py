@@ -5,8 +5,9 @@ import tempfile
 import os
 from pathlib import Path
 from ormd_cli.updater import ORMDUpdater
-from ormd_cli.parser import parse_document
+from ormd_cli.parser import parse_document, serialize_front_matter # Added serialize_front_matter
 from datetime import datetime, timezone
+import logging # Added for caplog
 
 
 class TestORMDUpdater:
@@ -273,7 +274,7 @@ Content here.
             
             # Read back the updated file
             updated_content = Path(temp_path).read_text(encoding='utf-8')
-            front_matter, _, _, _ = parse_document(updated_content)
+            front_matter, _, _, _, _ = parse_document(updated_content)
             
             # Check that existing fields are preserved
             assert front_matter['version'] == "1.0"
@@ -307,7 +308,7 @@ This document has no front-matter initially.
             
             # Read back the updated file
             updated_content = Path(temp_path).read_text(encoding='utf-8')
-            front_matter, body, _, _ = parse_document(updated_content)
+            front_matter, body, _, _, _ = parse_document(updated_content)
             
             # Check that front-matter was created
             assert front_matter is not None
@@ -320,4 +321,170 @@ This document has no front-matter initially.
             assert 'This document has no front-matter initially.' in body
             
         finally:
-            os.unlink(temp_path) 
+            os.unlink(temp_path)
+
+    def _create_ormd_content(self, fm_dict: dict, body_md: str) -> str:
+        """Helper to create ORMD file content string."""
+        fm_string = serialize_front_matter(fm_dict if fm_dict is not None else {})
+        return f"<!-- ormd:0.1 -->\n{fm_string}\n{body_md}"
+
+    def test_link_merging_no_initial_fm_links(self, tmp_path):
+        """Test merging auto-links when front-matter has no 'links' field initially."""
+        updater = ORMDUpdater()
+        body_content = "This is a [test link](target1 'rel1') and [another link](target2)."
+        # Front-matter without a 'links' key
+        initial_fm = {"title": "Test Doc", "authors": ["Author"]} 
+        content = self._create_ormd_content(initial_fm, body_content)
+        
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content, encoding='utf-8')
+
+        result = updater.update_file(str(file_path), legacy_links_mode=False)
+        assert result['updated']
+        assert 'links' in result['changes']
+        
+        updated_content = file_path.read_text(encoding='utf-8')
+        fm, _, _, _, _ = parse_document(updated_content)
+        
+        assert 'links' in fm
+        assert len(fm['links']) == 2
+        assert fm['links'][0]['id'] == 'auto-link-1'
+        assert fm['links'][0]['text'] == 'test link'
+        assert fm['links'][0]['target'] == 'target1'
+        assert fm['links'][0]['rel'] == 'rel1'
+        assert fm['links'][0]['source'] == 'inline'
+        assert fm['links'][1]['id'] == 'auto-link-2'
+        assert fm['links'][1]['text'] == 'another link'
+        assert fm['links'][1]['target'] == 'target2'
+        assert fm['links'][1]['rel'] is None
+        assert fm['links'][1]['source'] == 'inline'
+
+    def test_link_merging_with_manual_no_conflict(self, tmp_path):
+        """Test merging auto-links with existing non-conflicting manual links."""
+        updater = ORMDUpdater()
+        manual_links_fm = [
+            {"id": "manual1", "to": "#section1", "rel": "supports", "title": "Manual One"}
+        ]
+        initial_fm = {"title": "Test Doc", "authors": ["Author"], "links": manual_links_fm}
+        body_content = "A [new link](new_target 'new_rel')."
+        content = self._create_ormd_content(initial_fm, body_content)
+
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content, encoding='utf-8')
+
+        result = updater.update_file(str(file_path), legacy_links_mode=False)
+        assert result['updated']
+        assert 'links' in result['changes']
+        
+        updated_content = file_path.read_text(encoding='utf-8')
+        fm, _, _, _, _ = parse_document(updated_content)
+        
+        assert len(fm['links']) == 2
+        # Manual link should be first
+        assert fm['links'][0]['id'] == 'manual1'
+        assert fm['links'][0]['to'] == '#section1'
+        # Auto-generated link
+        assert fm['links'][1]['id'] == 'auto-link-1'
+        assert fm['links'][1]['text'] == 'new link'
+        assert fm['links'][1]['target'] == 'new_target'
+        assert fm['links'][1]['rel'] == 'new_rel'
+        assert fm['links'][1]['source'] == 'inline'
+
+
+    def test_link_merging_duplicate_auto_link_is_discarded(self, tmp_path):
+        """Test that an auto-link duplicating a manual link (same to, rel) is discarded."""
+        updater = ORMDUpdater()
+        manual_links_fm = [
+            {"id": "manual1", "to": "target1", "rel": "rel1", "title": "Manual One"}
+        ]
+        initial_fm = {"title": "Test Doc", "authors": ["Author"], "links": manual_links_fm}
+        # This auto-link has the same target and rel as manual1
+        body_content = "This is a [duplicate link](target1 'rel1'). And [another one](target2)."
+        content = self._create_ormd_content(initial_fm, body_content)
+
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content, encoding='utf-8')
+
+        result = updater.update_file(str(file_path), legacy_links_mode=False)
+        # It should be updated because of the second, non-duplicate link
+        assert result['updated']
+        assert 'links' in result['changes']
+        
+        updated_content = file_path.read_text(encoding='utf-8')
+        fm, _, _, _, _ = parse_document(updated_content)
+        
+        assert len(fm['links']) == 2 # Manual1 + auto-link-for-target2
+        assert fm['links'][0]['id'] == 'manual1' # Manual link preserved
+        assert fm['links'][1]['id'] == 'auto-link-1' # This ID is for the *second* inline link from body
+        assert fm['links'][1]['text'] == 'another one'
+        assert fm['links'][1]['target'] == 'target2'
+        assert fm['links'][1]['source'] == 'inline'
+
+
+    def test_link_merging_conflict_auto_link_is_added_with_warning(self, tmp_path, caplog):
+        """Test auto-link with same target but different rel as manual link (conflict)."""
+        updater = ORMDUpdater()
+        manual_links_fm = [
+            {"id": "manual1", "to": "target1", "rel": "rel_manual", "title": "Manual One"}
+        ]
+        initial_fm = {"title": "Test Doc", "authors": ["Author"], "links": manual_links_fm}
+        # This auto-link has same target, different rel
+        body_content = "This is a [conflicting link](target1 'rel_auto')."
+        content = self._create_ormd_content(initial_fm, body_content)
+
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content, encoding='utf-8')
+
+        with caplog.at_level(logging.WARNING):
+            result = updater.update_file(str(file_path), legacy_links_mode=False)
+        
+        assert result['updated']
+        assert 'links' in result['changes']
+        
+        updated_content = file_path.read_text(encoding='utf-8')
+        fm, _, _, _, _ = parse_document(updated_content)
+        
+        assert len(fm['links']) == 2 # Both manual and auto-link should be present
+        assert fm['links'][0]['id'] == 'manual1'
+        assert fm['links'][1]['id'] == 'auto-link-1'
+        assert fm['links'][1]['text'] == 'conflicting link'
+        assert fm['links'][1]['target'] == 'target1'
+        assert fm['links'][1]['rel'] == 'rel_auto'
+        assert fm['links'][1]['source'] == 'inline'
+        
+        assert "Conflict in" in caplog.text # Check for file path in log
+        assert "Auto-generated link auto-link-1 for target 'target1'" in caplog.text
+        assert "conflicts with an existing manual link with a different relationship" in caplog.text
+
+    def test_legacy_links_mode_no_link_merging(self, tmp_path):
+        """Test that in legacy_links_mode, auto-links are not merged."""
+        updater = ORMDUpdater()
+        manual_links_fm = [
+            {"id": "manual1", "to": "#section1", "rel": "supports", "title": "Manual One"}
+        ]
+        initial_fm = {"title": "Test Doc", "authors": ["Author"], "links": manual_links_fm}
+        body_content = "A [new link](new_target 'new_rel')." # This would normally be merged
+        content = self._create_ormd_content(initial_fm, body_content)
+
+        file_path = tmp_path / "test.ormd"
+        file_path.write_text(content, encoding='utf-8')
+
+        # Update other fields (dates, metrics etc may change) but links should not due to auto-gen
+        result = updater.update_file(str(file_path), legacy_links_mode=True)
+        
+        updated_content = file_path.read_text(encoding='utf-8')
+        fm, _, _, _, _ = parse_document(updated_content)
+        
+        assert len(fm['links']) == 1 # Only manual link should be present
+        assert fm['links'][0]['id'] == 'manual1'
+
+        # Check if 'links' was part of changes. If only other fields changed, it might not be.
+        # The key is that the content of 'links' only contains the original manual links.
+        final_links_content = fm.get("links", [])
+        assert len(final_links_content) == 1
+        assert final_links_content[0]['id'] == 'manual1'
+            
+        # If other fields like dates/metrics were updated, result['updated'] would be True.
+        # We are primarily concerned that the 'links' list was not modified by auto-links.
+        original_links_content = initial_fm.get("links", [])
+        assert original_links_content == final_links_content

@@ -151,7 +151,7 @@ def convert_cmd(ctx, input_file_path: str, output_ormd_path: str, input_format: 
 
             if md_content_full.strip().startswith("<!-- ormd:0.1 -->"):
                 # File is likely already an ORMD file, parse it fully
-                parsed_fm, parsed_body, _, parse_errors = parse_document(md_content_full)
+                parsed_fm, parsed_body, _, _, parse_errors = parse_document(md_content_full)
                 if parse_errors: # Still try to proceed if only minor errors
                     logger.warning(f"{SYMBOLS['warning']} Input ORMD-like file has parsing issues:")
                     for error in parse_errors: logger.warning(f"    {SYMBOLS['bullet']} {error}")

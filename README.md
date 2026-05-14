@@ -87,7 +87,7 @@ We used standard protocols...
 Critics argue that...
 ```
 
-**The magic:** `[[link-id]]` becomes clickable relationships with semantic meaning. Not just "click here" but "this supports that argument" or "this refutes that claim."
+**The magic:** `[[link-id]]` becomes clickable relationships with semantic meaning. Not just "click here" but "this supports that argument" or "this refutes that claim." Links can be defined directly in the front-matter as shown above, or created inline using a Markdown-like syntax `[display text](target "optional-relationship")` which tools can then auto-populate into the front-matter.
 
 ### Document Lifecycle: Draft → Published → Signed
 
