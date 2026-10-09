@@ -1,0 +1,17 @@
+<!-- ormd:0.1 -->
+---
+title: Undefined References
+authors:
+  - Test
+links:
+  - id: defined-link
+    rel: supports
+    to: "#section"
+---
+# Undefined References
+
+This references [[defined-link]] which exists.
+
+But also [[undefined-link]] which does not.
+
+And [[another-missing]] too.

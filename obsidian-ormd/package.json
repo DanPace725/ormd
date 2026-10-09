@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "dev": "node esbuild.config.mjs",
-    "test": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+    "deploy": "npm run build && node -e \"const fs=require('fs');const d='../../ormd-plugin/.obsidian/plugins/ormd/';['main.js','manifest.json','styles.css'].forEach(f=>fs.copyFileSync(f,d+f))\"",
+    "test": "vitest run"
   },
   "keywords": [
     "obsidian",
@@ -20,6 +21,8 @@
     "builtin-modules": "^4.0.0",
     "esbuild": "^0.25.0",
     "obsidian": "^1.8.7",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.6",
+    "yaml": "^2.9.0"
   }
 }

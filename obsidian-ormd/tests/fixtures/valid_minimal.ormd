@@ -1,0 +1,20 @@
+<!-- ormd:0.1 -->
+---
+title: Valid Minimal Document
+authors:
+  - id: alice
+    display: Alice L.
+links:
+  - id: g1
+    rel: supports
+    to: "#goal"
+---
+# Valid Minimal Document
+
+This is a valid ORMD document with a single link.
+
+See [[g1]] for the guiding principle.
+
+## <a id="goal"></a>Goal
+
+Open. Relational. Markdown.

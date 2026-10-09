@@ -3,6 +3,8 @@ export type Severity = "error" | "warning";
 export interface OrmdDiagnostic {
   severity: Severity;
   message: string;
+  /** 1-based line number, if determinable */
+  line?: number;
 }
 
 export interface OrmdLink {
@@ -38,6 +40,8 @@ export interface OrmdParseResult {
   body: string;
   autoLinks: OrmdLink[];
   diagnostics: OrmdDiagnostic[];
+  /** 1-based line number where the body starts in the original document */
+  bodyStartLine?: number;
 }
 
 export interface OrmdValidationResult extends OrmdParseResult {

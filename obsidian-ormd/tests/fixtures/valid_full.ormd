@@ -1,0 +1,45 @@
+<!-- ormd:0.1 -->
+---
+title: "Full Featured Document"
+authors:
+  - id: dr.sarah.chen
+    display: Dr. Sarah Chen
+    email: s.chen@example.org
+  - Jane Doe
+links:
+  - id: intro-ref
+    rel: supports
+    to: "#introduction"
+  - id: ext-cite
+    rel: cites
+    to: "https://example.org/paper"
+    text: "External Paper"
+    source: manual
+dates:
+  created: "2025-05-29T10:00:00Z"
+  modified: "2025-06-01T14:30:00Z"
+metrics:
+  word_count: 150
+  reading_time: "1 minute"
+permissions:
+  mode: draft
+  editable: true
+  signed: false
+version: "1.0"
+status: draft
+description: "A full-featured example document"
+language: en-US
+license: CC-BY-4.0
+keywords:
+  - test
+  - ormd
+---
+# Full Featured Document
+
+## <a id="introduction"></a>Introduction
+
+This document [[intro-ref]] demonstrates all schema features.
+
+We also cite [[ext-cite]] for background.
+
+Some [inline link](#introduction "references") text here.

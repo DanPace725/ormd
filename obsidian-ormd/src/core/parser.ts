@@ -1,21 +1,29 @@
 import type { OrmdDiagnostic, OrmdFrontMatter, OrmdLink, OrmdParseResult, YamlParser } from "./types";
 
-const VERSION_TAG = "<!-- ormd:0.1 -->";
+const VERSION_TAG = /^<!-- ormd:(0\.1|1\.0) -->/;
 
 export function parseOrmd(content: string, parseYaml: YamlParser): OrmdParseResult {
   const diagnostics: OrmdDiagnostic[] = [];
   const autoLinks: OrmdLink[] = [];
 
-  if (!content.trimStart().startsWith(VERSION_TAG)) {
+  const versionMatch = VERSION_TAG.exec(content.trimStart());
+  if (!versionMatch) {
     diagnostics.push({
       severity: "error",
-      message: "Missing or invalid version tag. Add '<!-- ormd:0.1 -->' at the top of the document.",
+      message: "Missing or invalid version tag. Expected '<!-- ormd:0.1 -->' or '<!-- ormd:1.0 -->' at the top of the document.",
+      line: 1,
     });
     return { frontMatter: null, body: "", autoLinks, diagnostics };
   }
 
-  const withoutVersion = content.trimStart().slice(VERSION_TAG.length).replace(/^\s*\r?\n?/, "");
-  const { frontMatter, body } = parseFrontMatterAndBody(withoutVersion, parseYaml, diagnostics);
+  // Count lines consumed by the version tag (leading whitespace + tag line)
+  const leadingLines = content.slice(0, content.indexOf(versionMatch[0])).split("\n").length - 1;
+  const versionTagLine = leadingLines + 1;
+
+  const withoutVersion = content.trimStart().slice(versionMatch[0].length).replace(/^\s*\r?\n?/, "");
+  const { frontMatter, body, bodyStartLine } = parseFrontMatterAndBody(
+    withoutVersion, parseYaml, diagnostics, versionTagLine,
+  );
 
   for (const match of body.matchAll(/\[([^\]]+)\]\(([^)]*)\)/g)) {
     const [, text, inner] = match;
@@ -30,20 +38,46 @@ export function parseOrmd(content: string, parseYaml: YamlParser): OrmdParseResu
   }
 
   if (hasAdditionalFrontMatterBlock(body)) {
+    // Find the line of the extra block
+    const bodyLines = body.split("\n");
+    let extraBlockLine: number | undefined;
+    let inFence = false;
+    for (let i = 0; i < bodyLines.length; i++) {
+      const stripped = bodyLines[i].trim();
+      if (/^(```+|~~~+)/.test(stripped)) {
+        inFence = !inFence;
+        continue;
+      }
+      if (!inFence && (stripped === "---" || stripped === "+++")) {
+        extraBlockLine = bodyStartLine + i;
+        break;
+      }
+    }
     diagnostics.push({
       severity: "error",
       message: "Multiple YAML front-matter blocks found. Only one is allowed at the beginning of the document.",
+      line: extraBlockLine,
     });
   }
 
   if (/^[ ]*\+\+\+meta\b/m.test(body)) {
+    // Find the line
+    const bodyLines = body.split("\n");
+    let metaLine: number | undefined;
+    for (let i = 0; i < bodyLines.length; i++) {
+      if (/^\s*\+\+\+meta\b/.test(bodyLines[i])) {
+        metaLine = bodyStartLine + i;
+        break;
+      }
+    }
     diagnostics.push({
       severity: "error",
       message: "`+++meta` blocks are no longer supported. All metadata must be in the YAML front-matter.",
+      line: metaLine,
     });
   }
 
-  return { frontMatter, body, autoLinks, diagnostics };
+  return { frontMatter, body, autoLinks, diagnostics, bodyStartLine };
 }
 
 export function splitInlineLinkInner(inner: string): { target: string; rel: string | null } {
@@ -62,12 +96,14 @@ function parseFrontMatterAndBody(
   content: string,
   parseYaml: YamlParser,
   diagnostics: OrmdDiagnostic[],
-): { frontMatter: OrmdFrontMatter | null; body: string } {
+  versionTagLine: number,
+): { frontMatter: OrmdFrontMatter | null; body: string; bodyStartLine: number } {
   const normalized = content.replace(/\r\n/g, "\n").trim();
   const delimiter = normalized.startsWith("---\n") ? "---" : normalized.startsWith("+++\n") ? "+++" : null;
 
+  // bodyStartLine is the 1-based line number where the body begins in the original document
   if (!delimiter) {
-    return { frontMatter: {}, body: normalized };
+    return { frontMatter: {}, body: normalized, bodyStartLine: versionTagLine + 1 };
   }
 
   const lines = normalized.split("\n");
@@ -80,33 +116,44 @@ function parseFrontMatterAndBody(
   }
 
   if (closingLine === -1) {
-    diagnostics.push({ severity: "error", message: "Invalid YAML in front-matter." });
-    return { frontMatter: null, body: normalized };
+    diagnostics.push({
+      severity: "error",
+      message: "Invalid YAML in front-matter.",
+      line: versionTagLine + 1,
+    });
+    return { frontMatter: null, body: normalized, bodyStartLine: versionTagLine + 1 };
   }
 
   const yamlContent = lines.slice(1, closingLine).join("\n");
   const body = lines.slice(closingLine + 1).join("\n").trim();
+  // +2: version tag line + opening delimiter line; +closingLine for the YAML lines; +1 for closing delimiter
+  const bodyStartLine = versionTagLine + 1 + closingLine + 1;
 
   if (!yamlContent.trim()) {
-    return { frontMatter: {}, body };
+    return { frontMatter: {}, body, bodyStartLine };
   }
 
   try {
     const parsed = parseYaml(yamlContent);
     if (parsed === null || parsed === undefined) {
-      return { frontMatter: {}, body };
+      return { frontMatter: {}, body, bodyStartLine };
     }
     if (!isRecord(parsed)) {
-      diagnostics.push({ severity: "error", message: "Front-matter must be a YAML object." });
-      return { frontMatter: null, body };
+      diagnostics.push({
+        severity: "error",
+        message: "Front-matter must be a YAML object.",
+        line: versionTagLine + 2,
+      });
+      return { frontMatter: null, body, bodyStartLine };
     }
-    return { frontMatter: parsed as OrmdFrontMatter, body };
+    return { frontMatter: parsed as OrmdFrontMatter, body, bodyStartLine };
   } catch (error) {
     diagnostics.push({
       severity: "error",
       message: `Invalid YAML in front-matter: ${error instanceof Error ? error.message : String(error)}`,
+      line: versionTagLine + 2,
     });
-    return { frontMatter: null, body };
+    return { frontMatter: null, body, bodyStartLine };
   }
 }
 

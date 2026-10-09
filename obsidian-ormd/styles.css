@@ -1,3 +1,5 @@
+/* ─── Status bar ─── */
+
 .ormd-status {
   color: var(--text-muted);
 }
@@ -13,3 +15,254 @@
 .ormd-status.has-warnings {
   color: var(--text-warning);
 }
+
+/* ─── Semantic links (reading view) ─── */
+
+.ormd-link {
+  text-decoration: none;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.ormd-link:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* supports — green */
+.ormd-rel-supports {
+  color: var(--text-success, #28a745);
+  background-color: rgba(40, 167, 69, 0.1);
+  border-bottom: 2px solid rgba(40, 167, 69, 0.4);
+}
+
+.ormd-rel-supports:hover {
+  background-color: rgba(40, 167, 69, 0.2);
+  color: var(--text-success, #1e7e34);
+}
+
+/* refutes — red */
+.ormd-rel-refutes {
+  color: var(--text-error, #dc3545);
+  background-color: rgba(220, 53, 69, 0.1);
+  border-bottom: 2px solid rgba(220, 53, 69, 0.4);
+}
+
+.ormd-rel-refutes:hover {
+  background-color: rgba(220, 53, 69, 0.2);
+  color: var(--text-error, #c82333);
+}
+
+/* cites — blue */
+.ormd-rel-cites {
+  color: var(--text-accent, #007bff);
+  background-color: rgba(0, 123, 255, 0.1);
+  border-bottom: 2px solid rgba(0, 123, 255, 0.4);
+}
+
+.ormd-rel-cites:hover {
+  background-color: rgba(0, 123, 255, 0.2);
+  color: var(--text-accent, #0056b3);
+}
+
+/* references — teal */
+.ormd-rel-references {
+  color: #17a2b8;
+  background-color: rgba(23, 162, 184, 0.1);
+  border-bottom: 2px solid rgba(23, 162, 184, 0.4);
+}
+
+.ormd-rel-references:hover {
+  background-color: rgba(23, 162, 184, 0.2);
+  color: #117a8b;
+}
+
+/* related — purple */
+.ormd-rel-related {
+  color: #6f42c1;
+  background-color: rgba(111, 66, 193, 0.1);
+  border-bottom: 2px solid rgba(111, 66, 193, 0.4);
+}
+
+.ormd-rel-related:hover {
+  background-color: rgba(111, 66, 193, 0.2);
+  color: #5a32a3;
+}
+
+/* extends — orange */
+.ormd-rel-extends {
+  color: #fd7e14;
+  background-color: rgba(253, 126, 20, 0.1);
+  border-bottom: 2px solid rgba(253, 126, 20, 0.4);
+}
+
+.ormd-rel-extends:hover {
+  background-color: rgba(253, 126, 20, 0.2);
+  color: #e36209;
+}
+
+/* default / no explicit relationship — muted */
+.ormd-rel-default {
+  color: var(--text-accent);
+  background-color: rgba(var(--background-modifier-hover-rgb, 0, 0, 0), 0.05);
+  border-bottom: 2px solid var(--text-accent);
+  opacity: 0.85;
+}
+
+.ormd-rel-default:hover {
+  opacity: 1;
+  background-color: rgba(var(--background-modifier-hover-rgb, 0, 0, 0), 0.1);
+}
+
+/* Undefined reference — error style */
+.ormd-link-undefined {
+  color: var(--text-error, #dc3545);
+  background-color: rgba(220, 53, 69, 0.08);
+  border-bottom: 2px dashed var(--text-error, #dc3545);
+  font-style: italic;
+  cursor: help;
+}
+
+.ormd-link-undefined:hover {
+  background-color: rgba(220, 53, 69, 0.15);
+}
+
+/* Cross-document file link indicator */
+.ormd-link-external-file::after {
+  content: " ↗";
+  font-size: 0.75em;
+  opacity: 0.6;
+}
+
+/* ─── Inline relationship badge (Live Preview) ─── */
+
+.ormd-inline-rel-badge {
+  display: inline-block;
+  font-size: 0.7em;
+  padding: 0 4px;
+  margin-left: 2px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+  vertical-align: middle;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.ormd-inline-rel-badge:hover {
+  opacity: 1;
+}
+
+.ormd-relationship-panel {
+  padding: 8px;
+}
+
+.ormd-relationship-panel h4 {
+  margin: 12px 0 4px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ormd-relationship-panel .ormd-panel-link {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin: 2px 0;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.ormd-relationship-panel .ormd-panel-link:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.ormd-relationship-panel .ormd-panel-link .ormd-panel-rel-badge {
+  font-size: 0.75em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.ormd-panel-title {
+  margin: 0 0 4px;
+  font-size: 1.1em;
+}
+
+.ormd-panel-authors {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-bottom: 8px;
+}
+
+.ormd-panel-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ormd-panel-status-badge {
+  font-size: 0.75em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background-color: var(--background-modifier-hover);
+}
+
+.ormd-status-draft { color: var(--text-warning); }
+.ormd-status-published { color: var(--text-success); }
+.ormd-status-archived { color: var(--text-muted); }
+
+.ormd-panel-version {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.ormd-panel-link-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ormd-panel-link-id {
+  font-weight: 500;
+}
+
+.ormd-panel-link-target {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.ormd-panel-link-warning {
+  color: var(--text-warning);
+  font-size: 0.8em;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.ormd-panel-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-ui-small);
+}
+
+.ormd-panel-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+}
+
+.ormd-panel-issue {
+  padding: 2px 0;
+  font-size: var(--font-ui-small);
+}
+
+.ormd-panel-issue-error {
+  color: var(--text-error);
+}
+

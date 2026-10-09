@@ -1,0 +1,13 @@
+<!-- ormd:0.1 -->
+---
+title: Bad Relationship
+authors:
+  - Test
+links:
+  - id: bad-rel
+    rel: destroys
+    to: "#section"
+---
+# Bad Relationship
+
+This uses [[bad-rel]] with an unapproved relationship type.
